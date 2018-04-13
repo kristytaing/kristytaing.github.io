@@ -1,2 +1,2 @@
 # kristytaing.github.io
-Practice website
+Personal website under construction
