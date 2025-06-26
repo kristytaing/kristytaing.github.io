@@ -1,4 +1,3 @@
-### kristytaing.github.io
 Kristy Taing's personal porfolio website.
 
 Created with Framer and mirrored from [ktaing.framer.website](https://ktaing.framer.website/) using HTTRACK.
