@@ -1,0 +1,11 @@
+HTTrack3.49-2 launched on Wed, 25 Jun 2025 17:06:40 at https://ktaing.framer.website/
+(httrack https://ktaing.framer.website/ )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+
+HTTrack Website Copier/3.49-2 mirror complete in 9 seconds : 9 links scanned, 8 files written (1312193 bytes overall) [181148 bytes received at 20127 bytes/sec], 1312292 bytes transferred using HTTP compression in 9 files, ratio 13%
+(No errors, 0 warnings, 0 messages)
