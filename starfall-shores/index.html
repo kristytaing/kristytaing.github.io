@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Starfall Shores</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#8FA8D6;font-family:'Segoe UI',system-ui,sans-serif}
+canvas#game{display:block;width:100%;height:100%}
+#grain-overlay{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;opacity:0.035;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:200px 200px}
+canvas#minimap{image-rendering:pixelated}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#ui>*{pointer-events:auto}
+#dialogue-box{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(92%,680px);background:#F5EAD5;border:2px solid rgba(187,168,217,0.5);border-radius:24px;padding:18px 24px;display:none;z-index:100;box-shadow:0 6px 32px rgba(61,43,94,0.14)}
+#dialogue-box .speaker{color:#3D2B5E;font-size:14px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+#dialogue-box .text{color:#3D2B5E;font-size:16px;line-height:1.5;min-height:48px}
+#dialogue-box .continue{color:rgba(180,120,160,0.6);font-size:12px;margin-top:8px;text-align:right;animation:blink 1.2s infinite}
+#dialogue-choices{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+#dialogue-choices button{background:rgba(220,180,210,0.2);border:1px solid rgba(200,150,180,0.4);color:#c06090;padding:10px 16px;border-radius:12px;font-size:14px;cursor:pointer;text-align:left;transition:all 0.2s}
+#dialogue-choices button:hover{background:rgba(220,180,210,0.35);transform:translateX(4px)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+#hud{position:fixed;top:12px;left:16px;display:none;z-index:50;background:#F5EAD5;border:2px solid rgba(187,168,217,0.5);border-radius:20px;padding:8px 14px;box-shadow:0 2px 12px rgba(61,43,94,0.1)}
+#hud-quest{position:fixed;top:12px;right:16px;background:#F5EAD5;border:2px solid rgba(187,168,217,0.5);border-radius:20px;padding:8px 14px;color:#3D2B5E;font-size:13px;max-width:260px;display:none;box-shadow:0 2px 12px rgba(61,43,94,0.1)}
+#hud-quest .quest-title{color:#3D2B5E;font-weight:700;margin-bottom:4px}
+#inventory-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92%,480px);background:#F5EAD5;border:2.5px solid rgba(187,168,217,0.6);border-radius:28px;padding:28px 24px;display:none;z-index:200;box-shadow:0 8px 40px rgba(61,43,94,0.18)}
+#inventory-panel h2{color:#3D2B5E;font-size:18px;margin-bottom:16px;text-align:center}
+#inventory-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.inv-slot{aspect-ratio:1;background:rgba(255,255,255,0.5);border:1.5px solid rgba(187,168,217,0.4);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;cursor:pointer;transition:all 0.2s;position:relative}
+.inv-slot:hover{background:rgba(212,143,160,0.18);transform:scale(1.05)}
+.inv-slot .count{position:absolute;bottom:2px;right:4px;font-size:10px;color:#3D2B5E}
+.inv-slot .item-name{font-size:8px;color:#8a7090;margin-top:2px}
+#quest-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(90%,500px);max-height:80vh;overflow-y:auto;background:rgba(255,240,250,0.95);border:2px solid rgba(150,160,200,0.4);border-radius:20px;padding:24px;display:none;z-index:200;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(120,120,180,0.2)}
+#quest-log h2{color:#8080c0;font-size:18px;margin-bottom:16px;text-align:center}
+.quest-entry{padding:10px;margin-bottom:8px;border-radius:12px;background:rgba(200,190,230,0.1);border:1px solid rgba(180,170,220,0.2)}
+.quest-entry.active{border-color:rgba(200,150,180,0.4);background:rgba(220,180,210,0.1)}
+.quest-entry.completed{opacity:0.5}
+.quest-entry h3{color:#c06090;font-size:14px}
+.quest-entry p{color:#8a7090;font-size:12px;margin-top:4px}
+.quest-entry .status{font-size:11px;margin-top:4px}
+.quest-entry .status.active-status{color:#80b080}
+.quest-entry .status.done-status{color:#aaa}
+#title-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#8FA8D6 0%,#BBA8D9 35%,#D48FA0 65%,#F2C46D 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:400;cursor:pointer;overflow-y:auto;padding:20px 0}
+#title-screen h1{font-size:clamp(28px,7vw,56px);color:#F5EAD5;text-shadow:0 0 30px rgba(200,120,160,0.3),0 2px 4px rgba(0,0,0,0.1);margin-bottom:6px;letter-spacing:3px;flex-shrink:0}
+#title-screen h2{font-size:clamp(12px,2.5vw,18px);color:rgba(245,234,213,0.75);font-weight:400;margin-bottom:20px;letter-spacing:6px;text-transform:uppercase;flex-shrink:0}
+#title-screen .prompt{color:rgba(245,234,213,0.75);font-size:14px;animation:blink 1.5s infinite}
+#title-screen .instructions{max-width:420px;margin:0 auto 20px;padding:16px 20px;background:rgba(245,234,213,0.25);border:1px solid rgba(245,234,213,0.3);border-radius:16px;text-align:left;color:rgba(120,80,110,0.7);font-size:12px;line-height:1.6;backdrop-filter:blur(4px);flex-shrink:0}
+#title-screen .instructions h3{color:rgba(245,234,213,1);font-size:13px;margin-bottom:6px;text-align:center;letter-spacing:2px}
+#title-screen .instructions .keys{display:inline-block;background:rgba(245,234,213,0.2);border:1px solid rgba(245,234,213,0.4);border-radius:4px;padding:1px 6px;font-size:11px;color:rgba(245,234,213,0.95);font-family:monospace;margin:0 2px}
+#sound-toggle{position:fixed;top:12px;left:12px;width:36px;height:36px;background:rgba(255,240,250,0.7);border:1px solid rgba(200,150,180,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:500;font-size:16px;color:#c06090;transition:all 0.2s}
+#sound-toggle:hover{background:rgba(220,180,210,0.3)}
+#zone-label{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,6vw,48px);color:#F2C46D;text-shadow:0 0 30px rgba(200,120,160,0.4);opacity:0;z-index:60;pointer-events:none;font-weight:700;letter-spacing:4px;text-transform:uppercase}
+#mobile-controls{position:fixed;bottom:20px;width:100%;display:none;z-index:80;padding:0 20px}
+.touch-pad{position:fixed;bottom:20px;left:20px;width:120px;height:120px;border-radius:50%;background:rgba(220,180,210,0.15);border:2px solid rgba(200,150,180,0.3)}
+.touch-stick{position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(200,150,180,0.35);top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.05s}
+.action-btns{position:fixed;bottom:20px;right:20px;display:flex;gap:10px}
+.action-btn{width:50px;height:50px;border-radius:50%;background:rgba(220,180,210,0.15);border:2px solid rgba(200,150,180,0.3);color:#c06090;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700}
+#notification{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(245,234,213,0.95);border:1px solid rgba(212,143,160,0.4);border-radius:14px;padding:12px 24px;color:#3D2B5E;font-size:14px;z-index:150;opacity:0;transition:all 0.4s;pointer-events:none;white-space:nowrap;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(180,120,160,0.15)}
+#minimap{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:50;display:none;border-radius:10px;overflow:hidden;border:1px solid rgba(200,150,180,0.3);box-shadow:0 2px 12px rgba(180,120,160,0.2)}
+#fade-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#f5e6f0;z-index:250;opacity:0;pointer-events:none;transition:opacity 0.5s}
+</style>
+</head>
+<body>
+<div id="title-screen"><h1>✿ Starfall Shores ✿</h1><h2>An Island Adventure</h2><div class="instructions"><h3>HOW TO PLAY</h3>🚶 <span class="keys">WASD</span> or <span class="keys">Arrow Keys</span> to move<br>💬 <span class="keys">E</span> or <span class="keys">Space</span> to talk &amp; interact<br>🎒 <span class="keys">I</span> to open inventory<br>📜 <span class="keys">Q</span> to view quest log<br>🔊 <span class="keys">M</span> to toggle sound<br><br>🌟 <em>Explore the island, befriend the locals, and collect 5 Starfall Crystals to save the island!</em><br>📱 <em style="font-size:11px">Mobile: virtual joystick + ACT/BAG buttons</em></div><button id="start-btn" style="margin-top:10px;padding:14px 40px;background:rgba(245,234,213,0.2);border:2px solid rgba(245,234,213,0.5);border-radius:20px;color:#F5EAD5;font-size:16px;cursor:pointer;letter-spacing:2px;transition:all 0.3s;flex-shrink:0">✿ Set Sail ✿</button><div class="prompt" style="margin-top:12px">Click the button to begin</div></div>
+<canvas id="game"></canvas>
+<div id="game-error" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;border-radius:8px;z-index:9999;max-width:80%;font-size:12px;white-space:pre-wrap;"></div>
+<div id="grain-overlay"></div>
+<div id="ui">
+<div id="hud"></div>
+<div id="hud-quest"><div class="quest-title"></div><div class="quest-desc"></div></div>
+<div id="dialogue-box"><div class="speaker" id="dialogue-name"></div><div class="text" id="dialogue-text"></div><div class="continue">▼ Press Space</div><div id="dialogue-choices"></div></div>
+<div id="inventory-panel"><button class="panel-close" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#c06090;font-size:18px;cursor:pointer">✕</button><h2>🎒 Inventory</h2><div id="inventory-grid"></div><p style="color:#8a7090;font-size:11px;text-align:center;margin-top:12px">Press I or tap to close</p></div>
+<div id="quest-panel"><button class="panel-close" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#c06090;font-size:18px;cursor:pointer">✕</button><h2>📜 Quest Log</h2><div id="quest-content"></div><p style="color:#8a7090;font-size:11px;text-align:center;margin-top:12px">Press Q or tap to close</p></div>
+<div id="map-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;background:linear-gradient(160deg,#2a1f3d,#3d2b5e);border:2px solid rgba(187,168,217,0.4);border-radius:18px;padding:24px 28px;min-width:360px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.6);color:#e8e0f0;font-family:inherit">
+  <button class="panel-close" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#c06090;font-size:18px;cursor:pointer">✕</button>
+  <h2 style="margin:0 0 6px;font-size:18px;text-align:center;letter-spacing:1px">🗺️ Island Map</h2>
+  <p style="margin:0 0 16px;font-size:11px;text-align:center;color:#9a88b0;letter-spacing:0.5px">Click a location to fast-travel there</p>
+  <div id="map-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+  <p style="margin:12px 0 0;font-size:11px;text-align:center;color:#6a5880">Press M or tap to close</p>
+</div>
+<div id="notification"></div>
+<div id="zone-label"></div>
+<div id="fade-overlay"></div>
+</div>
+<div id="sound-toggle">🔊</div>
+<canvas id="minimap" width="120" height="90"></canvas>
+<div id="mobile-controls" style="display:none">
+<div class="touch-pad" id="joystick-area"><div class="touch-stick" id="touch-stick"></div></div>
+<div class="action-btns" id="action-buttons"></div>
+</div>
+<div id="hud-buttons" style="position:fixed;top:12px;right:60px;display:flex;gap:6px;z-index:80">
+<button id="inv-btn" style="width:34px;height:34px;background:rgba(255,240,250,0.7);border:1px solid rgba(200,150,180,0.3);border-radius:50%;cursor:pointer;font-size:16px">🎒</button>
+<button id="quest-btn" style="width:34px;height:34px;background:rgba(255,240,250,0.7);border:1px solid rgba(200,150,180,0.3);border-radius:50%;cursor:pointer;font-size:16px">📜</button>
+<button id="map-btn" style="width:34px;height:34px;background:rgba(255,240,250,0.7);border:1px solid rgba(200,150,180,0.3);border-radius:50%;cursor:pointer;font-size:16px">🗺️</button>
+</div>
+<script src="js/core.js"></script>
+<script src="js/render.js"></script>
+<script src="js/player.js"></script>
+<script src="js/npcs.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/systems.js"></script>
+<script src="js/world.js"></script>
+<script src="js/save.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>
