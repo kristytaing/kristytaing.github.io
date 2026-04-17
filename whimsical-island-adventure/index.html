@@ -291,6 +291,8 @@ let idleTimer = 0;
 let islandStartTime = 0;
 let critterInteracted = false;
 let crystalsCollected = 0;
+let secretCrystal = null;
+let secretFound = false;
 
 // ============= COLOR HELPERS =============
 function hexRgb(h){
@@ -1151,10 +1153,85 @@ function spawnCrystals(islandIdx) {
   positions.forEach(([wx,wy],i)=>{
     crystals.push({wx,wy,phase:(i/5)*Math.PI*2,collected:false,lore:lore[i]});
   });
+  // Hidden secret crystal — invisible until very close
+  const secretPositions=[[0.15,0.55],[0.82,0.70],[0.20,0.72],[0.78,0.55],[0.50,0.85]];
+  const sp = secretPositions[islandIdx % secretPositions.length];
+  secretCrystal = {wx:sp[0], wy:sp[1], phase:Math.random()*Math.PI*2, collected:false, secret:true};
 }
 
 
 // ============= RENDER SCENE =============
+function drawSecretCrystal(t) {
+  if(!secretCrystal || secretCrystal.collected) return;
+  const {sx,sy} = ws(secretCrystal.wx, secretCrystal.wy);
+  const sc = depthScale(secretCrystal.wy) * 50;
+  const {sx:px,sy:py} = ws(player.wx, player.wy);
+  const dist = Math.hypot(px-sx, py-sy);
+  const revealRadius = sc * 4.5;
+  if(dist > revealRadius) return;
+  const revealAmt = Math.max(0, 1 - dist / revealRadius);
+  const alpha = Math.pow(revealAmt, 2);
+  const pulse = 0.5 + 0.5*Math.sin(t*3.2 + secretCrystal.phase);
+  ctx.save();
+  ctx.globalAlpha = alpha * (0.3 + 0.4*pulse);
+  const grad = ctx.createRadialGradient(sx,sy,0,sx,sy,sc*2.2);
+  grad.addColorStop(0,'rgba(255,230,100,0.9)');
+  grad.addColorStop(0.5,'rgba(200,160,255,0.4)');
+  grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.beginPath(); ctx.arc(sx,sy,sc*2.2*(0.7+0.3*pulse),0,Math.PI*2);
+  ctx.fillStyle=grad; ctx.fill();
+  if(dist < revealRadius * 0.5) {
+    const cAlpha = Math.pow(Math.max(0,1-dist/(revealRadius*0.5)),1.5);
+    ctx.globalAlpha = cAlpha;
+    ctx.save();
+    ctx.translate(sx, sy - sc*0.3 - Math.sin(t*2.1)*sc*0.12);
+    ctx.rotate(t*0.8);
+    ctx.strokeStyle='rgba(255,220,80,0.95)'; ctx.lineWidth=2;
+    for(let s=0;s<6;s++){
+      const a=s/6*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(Math.cos(a)*sc*0.7, Math.sin(a)*sc*0.7); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(0,0,sc*0.22,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,240,120,1)'; ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function checkSecretCrystal() {
+  if(!secretCrystal || secretCrystal.collected || secretFound) return;
+  const {sx:px,sy:py}=ws(player.wx,player.wy);
+  const {sx,sy}=ws(secretCrystal.wx,secretCrystal.wy);
+  const dist=Math.hypot(px-sx,py-sy);
+  const sc=depthScale(player.wy-0.18)*50;
+  if(dist < sc*1.5) {
+    secretCrystal.collected=true; secretFound=true;
+    score+=100; updateScoreDisplay();
+    let b=document.getElementById('secret-banner');
+    if(!b){b=document.createElement('div');b.id='secret-banner';
+      b.style.cssText='position:fixed;top:22%;left:50%;transform:translateX(-50%);'+
+        'background:linear-gradient(135deg,rgba(80,50,120,0.95),rgba(40,20,70,0.95));'+
+        'border:2px solid rgba(255,220,80,0.8);border-radius:14px;padding:10px 22px;'+
+        'color:#FFE44A;font-size:14px;font-weight:700;text-align:center;z-index:90;'+
+        'pointer-events:none;opacity:0;transition:opacity 0.4s;white-space:nowrap;';
+      document.getElementById('game-wrap').appendChild(b);}
+    b.innerHTML='🌟 Secret Crystal Found! <span style="color:#C8A8FF">+100</span>';
+    b.style.opacity='1';
+    setTimeout(()=>{b.style.opacity='0';},3200);
+    try{const ac=new(window.AudioContext||window.webkitAudioContext)();
+      [523.25,659.25,783.99,1046.5].forEach((f,i)=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g);g.connect(ac.destination);
+        o.frequency.value=f;o.type='sine';
+        g.gain.setValueAtTime(0,ac.currentTime+i*0.12);
+        g.gain.linearRampToValueAtTime(0.18,ac.currentTime+i*0.12+0.04);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+i*0.12+0.35);
+        o.start(ac.currentTime+i*0.12);o.stop(ac.currentTime+i*0.12+0.35);
+      });}catch(e){}
+  }
+}
+
 function renderScene(t) {
   const isl = ISLANDS[currentIsland];
   ctx.clearRect(0,0,W,H);
@@ -1190,6 +1267,7 @@ function renderScene(t) {
   } });
   drawParticles();
   drawTweenCrystals(performance.now()/1000);
+  drawSecretCrystal(performance.now()/1000);
 }
 
 function drawDecor(d, t) {
