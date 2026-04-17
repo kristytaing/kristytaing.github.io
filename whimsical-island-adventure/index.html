@@ -842,7 +842,7 @@ function renderScene(t) {
 
   decorations.forEach(d => drawList.push({wy:d.wy, fn:()=>drawDecor(d,t)}));
   crystals.forEach(cx => { if(!cx.collected) drawList.push({wy:cx.wy, fn:()=>drawCrystal(cx,t)}); });
-  drawList.push({wy:player.wy, fn:()=>drawCharacter(t)});
+  drawList.push({wy:player.wy + 0.005, fn:()=>drawCharacter(t)});
 
   drawList.sort((a,b)=>a.wy-b.wy);
   drawList.forEach(item=>item.fn());
@@ -1068,7 +1068,7 @@ function onResize(){
 function loadIsland(idx){
   currentIsland=idx; crystalsCollected=0;
   for(let i=0;i<5;i++){const g=document.getElementById(`g${i}`);if(g){g.querySelector('polygon').setAttribute('fill',P.lilac);g.classList.remove('lit');}}
-  player.wx=0.5;player.wy=0.70;player.facing=1;player.collectAnim=0;
+  player.wx=0.5;player.wy=0.78;player.facing=1;player.collectAnim=0;
   particles=[];
   buildScene(idx);spawnCrystals(idx);initClouds();
   const lbl=document.getElementById('island-label');
