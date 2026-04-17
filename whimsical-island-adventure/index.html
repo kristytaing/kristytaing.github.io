@@ -528,10 +528,12 @@ function drawCharacter(t) {
   const breath = Math.sin(player.bobT * 1.2) * 0.018 + 1.0;
   const facing = player.facing;
   const scarfWave = Math.sin(t * 3.5 + 0.5) * 6 * sc;
+  // Use separate flip via translate instead of negative scale (avoids clipping bugs)
+  const cx = sx + (facing < 0 ? 0 : 0);
 
   ctx.save();
-  ctx.translate(sx, sy - 8*sc + bob);
-  ctx.scale(facing * breath, breath);
+  ctx.translate(cx, sy - 8*sc + bob);
+  if (facing < 0) { ctx.scale(-1 * breath, breath); } else { ctx.scale(breath, breath); }
 
   // Ground shadow
   ctx.beginPath();
@@ -874,7 +876,7 @@ function renderScene(t) {
   drawList.push({wy:player.wy + 0.005, fn:()=>drawCharacter(t)});
 
   drawList.sort((a,b)=>a.wy-b.wy);
-  drawList.forEach(item=>item.fn());
+  drawList.forEach(item=>{ try{item.fn();}catch(e){console.error('drawList error:',e);} });
 
   drawParticles();
 }
@@ -1071,8 +1073,9 @@ function startAmbient(){
 function toggleSound(){
   soundOn=!soundOn;
   document.getElementById('sound-btn').textContent=soundOn?'🔊':'🔇';
-  if(soundOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-  if(soundOn&&!ambientStarted)startAmbient();
+  if(!soundOn&&audioCtx&&audioCtx.state==='running') audioCtx.suspend();
+  if(soundOn&&audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  if(soundOn&&!ambientStarted) startAmbient();
 }
 
 // ============= INPUT =============
