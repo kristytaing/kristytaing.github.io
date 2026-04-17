@@ -23,8 +23,8 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
   border-radius:12px;padding:8px 16px;display:flex;align-items:center;gap:8px;
   box-shadow:0 2px 12px rgba(79,66,97,0.2);}
 .clabel{color:#4F4261;font-size:13px;font-weight:800;letter-spacing:0.3px;}
-.gem{width:22px;height:22px;transition:filter 0.3s;}
-.gem.lit{filter:drop-shadow(0 0 4px #9B9AE2);}
+.gem{width:22px;height:22px;transition:filter 0.3s,transform 0.3s;}
+.gem.lit{filter:drop-shadow(0 0 6px #9B9AE2) drop-shadow(0 0 12px #9B9AE2);transform:scale(1.15);}
 #score-box{position:absolute;top:14px;right:56px;background:#F0DEC2;border:2px solid #C6C3DC;
   border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:6px;
   box-shadow:0 2px 12px rgba(79,66,97,0.2);}
@@ -41,9 +41,10 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 
 /* Dialogue */
 #dialogue{position:fixed;bottom:0;left:0;right:0;z-index:30;
-  background:rgba(240,222,194,0.92);border-top:3px solid #EB6259;
-  padding:14px 28px 14px;display:none;font-family:'Nunito',sans-serif;
-  box-shadow:0 -4px 20px rgba(79,66,97,0.25);backdrop-filter:blur(4px);
+  background:rgba(248,236,210,0.97);border-top:3px solid #EB6259;
+  border-radius:18px 18px 0 0;
+  padding:16px 28px 14px;display:none;font-family:'Nunito',sans-serif;
+  box-shadow:0 -6px 30px rgba(79,66,97,0.3);backdrop-filter:blur(6px);
   cursor:pointer;pointer-events:all;}
 #dialogue-text{color:#4F4261;font-size:15px;font-weight:600;line-height:1.6;white-space:pre-wrap;}
 #dialogue-hint{color:#9B9AE2;font-size:11px;font-weight:700;margin-top:4px;text-align:right;}
@@ -546,14 +547,14 @@ function drawCharacter(t) {
   ctx.fillStyle = '#4A2810';
   // Long hair flowing down behind - two strands
   ctx.beginPath();
-  ctx.moveTo(-8*sc, -42*sc);
+  ctx.moveTo(-8*sc, -55*sc);
   ctx.quadraticCurveTo(-16*sc - scarfWave*0.3, -20*sc, -14*sc - scarfWave*0.2, 10*sc);
   ctx.quadraticCurveTo(-12*sc, 16*sc, -8*sc, 14*sc);
   ctx.quadraticCurveTo(-6*sc, 4*sc, -10*sc - scarfWave*0.1, -20*sc);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(8*sc, -42*sc);
+  ctx.moveTo(8*sc, -55*sc);
   ctx.quadraticCurveTo(16*sc + scarfWave*0.3, -20*sc, 14*sc + scarfWave*0.2, 10*sc);
   ctx.quadraticCurveTo(12*sc, 16*sc, 8*sc, 14*sc);
   ctx.quadraticCurveTo(6*sc, 4*sc, 10*sc + scarfWave*0.1, -20*sc);
@@ -787,6 +788,7 @@ function drawParticles() {
     ctx.save(); ctx.globalAlpha=Math.max(0,p.life);
     ctx.translate(p.x,p.y); ctx.rotate(p.life*5);
     ctx.fillStyle=p.col;
+    ctx.shadowColor=p.col; ctx.shadowBlur=8*p.life;
     ctx.beginPath();
     for(let i=0;i<5;i++){
       const a=(i/5)*Math.PI*2-Math.PI/2, ai=a+Math.PI/5;
@@ -858,6 +860,13 @@ function buildScene(islandIdx) {
     decorations.push({type:'flowers',wx,wy,sm,col:isl.accent,phase:0});
   });
 
+  // Ambient small flowers scattered across ground
+  const ambientFlowerCols=['#F29FD7','#EBB21A','#EB6259','#9B9AE2','#ffffff','#C6C3DC'];
+  for(let fi=0;fi<16;fi++){
+    const fx=0.08+((fi*0.37+0.15)%0.84), fy=0.52+(fi%5)*0.09;
+    decorations.push({type:'sflower',wx:fx,wy:fy,sm:0.28+((fi*0.13)%0.18),col:ambientFlowerCols[fi%ambientFlowerCols.length],phase:fi*0.6});
+  }
+
   // Sort back-to-front by wy
   decorations.sort((a,b)=>a.wy-b.wy);
 }
@@ -885,6 +894,12 @@ function renderScene(t) {
   drawGround(isl);
   drawPools(isl, t);
   drawPath(isl);
+  // Depth vignette
+  const vg = ctx.createRadialGradient(W*0.5,H*0.5,H*0.1,W*0.5,H*0.5,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(30,20,50,0.22)');
+  ctx.fillStyle=vg;
+  ctx.fillRect(0,0,W,H);
   drawScatteredPetals(isl, t);
 
   // Draw decorations + crystals + player sorted back-to-front
@@ -908,6 +923,21 @@ function renderScene(t) {
 function drawDecor(d, t) {
   const {sx,sy} = ws(d.wx,d.wy);
   const sc = depthScale(d.wy-0.18)*d.sm;
+  if (d.type==='sflower') {
+    // Small ambient flower
+    const bobY = Math.sin(t*1.8+d.phase)*1.2*sc;
+    ctx.strokeStyle='#6F7E4A'; ctx.lineWidth=1.0*sc; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx,sy-7*sc+bobY); ctx.stroke();
+    for(let pi=0;pi<5;pi++){
+      const pa=pi*(Math.PI*2/5)+t*0.4+d.phase;
+      ctx.beginPath();
+      ctx.ellipse(sx+Math.cos(pa)*3.5*sc, sy-7*sc+bobY+Math.sin(pa)*2.5*sc, 2.2*sc, 1.5*sc, pa, 0, Math.PI*2);
+      ctx.fillStyle=d.col; ctx.globalAlpha=0.85; ctx.fill(); ctx.globalAlpha=1;
+    }
+    ctx.beginPath(); ctx.arc(sx,sy-7*sc+bobY,1.8*sc,0,Math.PI*2);
+    ctx.fillStyle='#EBB21A'; ctx.fill();
+    return;
+  }
   if (d.type==='tree') drawTree(sx,sy,sc,d.col,d.colDark,t,d.phase);
   else if (d.type==='rock') drawRock(sx,sy,sc,d.col);
   else if (d.type==='flowers') drawFlowerPatch(sx,sy,sc,d.col);
@@ -955,6 +985,7 @@ function collectCrystal(cx) {
   // Score pop
   const {sx,sy} = ws(cx.wx,cx.wy);
   particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
+  for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
   crystalsCollected++;
   score+=100;
   const gem=document.getElementById(`g${crystalsCollected-1}`);
