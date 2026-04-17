@@ -499,7 +499,7 @@ function drawPlayer(){
   ctx.fillStyle=sw?'#f0d0ff':'#ffb0cc';ctx.fill();
   // Bow highlight
   ctx.globalAlpha=0.5;ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.ellipse(bowX-4,bowY-0.8,2,1,−0.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(bowX-4,bowY-0.8,2,1,-0.3,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(bowX+4,bowY-0.8,2,1,0.3,0,Math.PI*2);ctx.fill();
   ctx.globalAlpha=1;ctx.restore();
 
