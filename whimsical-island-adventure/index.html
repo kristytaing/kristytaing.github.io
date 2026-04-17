@@ -361,7 +361,7 @@ function drawPath(isl) {
 }
 
 // ============= WATER POOLS =============
-function drawPools(isl) {
+function drawPools(isl, t) {
   const pools = [[0.2,0.62,0.11,0.045],[0.78,0.58,0.09,0.038]];
   pools.forEach(([rx,ry,rw,rh])=>{
     const x=rx*W, y=ry*H, ew=rw*W, eh=rh*H;
@@ -379,6 +379,20 @@ function drawPools(isl) {
     ctx.ellipse(x-ew*0.2, y-eh*0.15, ew*0.45, eh*0.3, -0.3, 0, Math.PI*2);
     ctx.fillStyle = rgba(isl.skyMid, 0.45);
     ctx.fill();
+    // Shimmer ripple lines
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x, y, ew, eh, 0, 0, Math.PI*2);
+    ctx.clip();
+    ctx.strokeStyle = rgba(isl.waterCol, 0.4);
+    ctx.lineWidth = 1.2;
+    for(let i=0;i<4;i++){
+      const offset = Math.sin(t*2 + i*0.7) * 3;
+      ctx.beginPath();
+      ctx.ellipse(x + offset, y - eh*0.1*(i+1)*0.4, ew*(0.6-i*0.1), eh*0.18, 0, Math.PI, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
     // Edge
     ctx.beginPath();
     ctx.ellipse(x, y, ew, eh, 0, 0, Math.PI*2);
@@ -479,20 +493,26 @@ function drawFlowerPatch(x, y, sc, col) {
   }
 }
 
-function drawScatteredPetals(isl) {
-  // Petals along path
-  const petals = [
-    [0.44,0.88],[0.50,0.80],[0.47,0.73],[0.52,0.67],
-    [0.39,0.60],[0.55,0.55],[0.43,0.50]
+function drawScatteredPetals(isl, t) {
+  const petalSeeds = [
+    [0.15,0.48,0.8],[0.28,0.62,1.2],[0.42,0.52,0.9],[0.55,0.66,1.0],
+    [0.68,0.44,0.7],[0.78,0.58,1.1],[0.33,0.76,0.85],[0.60,0.54,0.95],
+    [0.20,0.70,1.3],[0.72,0.74,0.75],[0.48,0.38,0.65],[0.85,0.68,1.0]
   ];
-  petals.forEach(([rx,ry],i)=>{
-    const sc=depthScale(ry-0.18)*0.5;
+  petalSeeds.forEach(([bx,by,spd],i)=>{
+    const drift = ((t * spd * 0.04 + i * 0.37) % 1.0);
+    const wx = (bx + Math.sin(t*spd*0.3+i)*0.04) % 1.0;
+    const wy = (by + drift * 0.25) % 0.95;
+    const {sx,sy} = ws(wx, wy);
+    const sc = depthScale(wy) * 0.6;
+    const angle = t * spd * 1.5 + i * 1.2;
     ctx.save();
-    ctx.translate(rx*W, ry*H);
-    ctx.rotate(i*0.8);
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.55 + Math.sin(t*spd+i)*0.2;
+    ctx.fillStyle = isl.accent;
     ctx.beginPath();
-    ctx.ellipse(0,0,6*sc,3*sc,0,0,Math.PI*2);
-    ctx.fillStyle = rgba(isl.accent, 0.75);
+    ctx.ellipse(0, 0, 4*sc, 2.5*sc, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
   });
@@ -502,14 +522,15 @@ function drawScatteredPetals(isl) {
 // ============= CHIBI CHARACTER =============
 function drawCharacter(t) {
   const {sx, sy} = ws(player.wx, player.wy);
-  const sc = depthScale(player.wy - 0.18) * 1.1;
+  const sc = depthScale(player.wy) * 1.2;
   const bob = Math.sin(player.bobT * 3.5) * 2.5 * sc;
+  const breath = Math.sin(player.bobT * 1.2) * 0.018 + 1.0;
   const facing = player.facing;
   const scarfWave = Math.sin(t * 3.5 + 0.5) * 6 * sc;
 
   ctx.save();
-  ctx.translate(sx, sy + bob);
-  ctx.scale(facing, 1);
+  ctx.translate(sx, sy - 8*sc + bob);
+  ctx.scale(facing * breath, breath);
 
   // Ground shadow
   ctx.beginPath();
@@ -671,23 +692,23 @@ function drawCharacter(t) {
 function drawCrystal(cx, t) {
   if (cx.collected) return;
   const {sx, sy} = ws(cx.wx, cx.wy);
-  const sc = depthScale(cx.wy - 0.18) * 0.9;
+  const sc = depthScale(cx.wy - 0.18) * 1.4;
   const bob = Math.sin(t*2.2 + cx.phase) * 5 * sc;
-  const py = sy - 22*sc + bob;
+  const py = sy - 28*sc + bob;
 
   ctx.save();
   // Aura
-  const ag = ctx.createRadialGradient(sx, py, 2, sx, py, 26*sc);
+  const ag = ctx.createRadialGradient(sx, py, 2, sx, py, 32*sc);
   ag.addColorStop(0, rgba(P.lavender, 0.55));
   ag.addColorStop(1, rgba(P.lavender, 0));
   ctx.fillStyle = ag;
-  ctx.beginPath(); ctx.arc(sx, py, 26*sc, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx, py, 32*sc, 0, Math.PI*2); ctx.fill();
 
   // Orbiting dots
   for (let i=0;i<5;i++) {
     const a = t*1.8 + (i/5)*Math.PI*2 + cx.phase;
     ctx.beginPath();
-    ctx.arc(sx+Math.cos(a)*14*sc, py+Math.sin(a)*6*sc, 2*sc, 0, Math.PI*2);
+    ctx.arc(sx+Math.cos(a)*18*sc, py+Math.sin(a)*8*sc, 2.5*sc, 0, Math.PI*2);
     ctx.fillStyle = P.lavender; ctx.fill();
   }
 
@@ -752,6 +773,15 @@ function drawParticles() {
     }
     ctx.closePath(); ctx.fill();
     ctx.restore();
+    if(p.text){
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.font = `bold ${Math.round(14*p.life+8)}px Nunito`;
+      ctx.fillStyle = p.col;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
   });
 }
 
@@ -812,7 +842,7 @@ function buildScene(islandIdx) {
 function spawnCrystals(islandIdx) {
   crystals=[]; crystalsCollected=0;
   const positions=[
-    [0.25,0.55],[0.70,0.52],[0.38,0.70],[0.60,0.68],[0.50,0.44]
+    [0.25,0.60],[0.72,0.58],[0.38,0.75],[0.62,0.72],[0.50,0.50]
   ];
   // Shuffle
   for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
@@ -820,8 +850,6 @@ function spawnCrystals(islandIdx) {
     crystals.push({wx,wy,phase:(i/5)*Math.PI*2,collected:false});
   });
 }
-
-let crystalsCollected = 0;
 
 
 // ============= RENDER SCENE =============
@@ -832,9 +860,9 @@ function renderScene(t) {
   drawSky(isl);
   drawClouds(isl);
   drawGround(isl);
-  drawPools(isl);
+  drawPools(isl, t);
   drawPath(isl);
-  drawScatteredPetals(isl);
+  drawScatteredPetals(isl, t);
 
   // Draw decorations + crystals + player sorted back-to-front
   // Build a combined draw list
@@ -894,10 +922,22 @@ function updatePlayer(dt) {
 
 function collectCrystal(cx) {
   cx.collected=true;
+  // Screen flash on collect
+  const fl = document.getElementById('flash');
+  if(fl){ fl.style.background='rgba(235,178,26,0.35)'; fl.style.opacity='1'; setTimeout(()=>{fl.style.opacity='0';},300); }
+  // Score pop
+  const {sx,sy} = ws(cx.wx,cx.wy);
+  particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
   crystalsCollected++;
   score+=100;
   const gem=document.getElementById(`g${crystalsCollected-1}`);
-  if(gem){gem.querySelector('polygon').setAttribute('fill',P.lavender);gem.classList.add('lit');}
+  if(gem){
+  gem.querySelector('polygon').setAttribute('fill',P.lavender);
+  gem.classList.add('lit');
+  gem.style.transform='scale(1.5)';
+  gem.style.transition='transform 0.15s ease-out';
+  setTimeout(()=>{gem.style.transform='scale(1)';gem.style.transition='transform 0.3s ease-in';},150);
+}
   document.getElementById('score-val').textContent=score;
   spawnBurst(cx.wx,cx.wy,18);
   playCrystalCollect();
@@ -912,7 +952,15 @@ function onIslandComplete() {
     gameRunning=false;
     setTimeout(()=>document.getElementById('win-screen').classList.remove('hidden'),800);
   } else {
-    showDialogue(`✨ ${ISLANDS[currentIsland].name} cleared!\n\nYou collected all 5 crystals! The path to ${ISLANDS[currentIsland+1].name} glows before you.\n\nOpen the map (M) to travel onward!`);
+    const travelHints = [
+      "Open the map (M) to sail to the next island! ⛵",
+      "All crystals found! Press M to chart your next voyage! 🗺️",
+      "Wonderful! The map awaits — press M to journey onward! ✨",
+      "You've lit up this island! Press M to discover more! 🌟",
+      "Island complete! Your next adventure is just a map away (M)! 🎉"
+    ];
+    const hint = travelHints[Math.min(currentIsland, travelHints.length-1)];
+    showDialogue(`✨ ${ISLANDS[currentIsland].name} cleared!\n\nYou collected all 5 crystals! The path to ${ISLANDS[currentIsland+1].name} glows before you.\n\n${hint}`);
   }
 }
 
