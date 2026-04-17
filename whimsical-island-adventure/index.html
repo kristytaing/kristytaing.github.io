@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Whimsical Island Adventure</title>
+<script async src="https://vibej.am/2026/widget.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#4F4261; overflow:hidden; font-family:'Nunito',sans-serif; touch-action:none; }
+#c { display:block; width:100vw; height:100vh; }
+
+/* Grain overlay */
+#grain {
+  position:fixed; inset:0; pointer-events:none; z-index:10;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.10;
+}
+
+/* HUD */
+#hud {
+  position:fixed; inset:0; pointer-events:none; z-index:20;
+  font-family:'Nunito',sans-serif;
+}
+#crystal-bar {
+  position:absolute; top:14px; left:14px;
+  background:#F0DEC2; border:1.5px solid #C6C3DC; border-radius:10px;
+  padding:7px 14px; display:flex; align-items:center; gap:7px;
+  pointer-events:none;
+}
+#crystal-bar .label { color:#4F4261; font-size:13px; font-weight:700; margin-right:4px; }
+.gem { width:20px; height:20px; display:inline-block; }
+#score-box {
+  position:absolute; top:14px; right:60px;
+  background:#F0DEC2; border:1.5px solid #C6C3DC; border-radius:10px;
+  padding:7px 14px; display:flex; align-items:center; gap:6px;
+  pointer-events:none;
+}
+#score-box .coin { font-size:18px; }
+#score-box .val { color:#4F4261; font-size:14px; font-weight:800; }
+#sound-btn {
+  position:absolute; top:14px; right:14px;
+  background:#F0DEC2; border:1.5px solid #C6C3DC; border-radius:10px;
+  padding:7px 10px; cursor:pointer; font-size:18px; pointer-events:all;
+  color:#4F4261;
+}
+#island-label {
+  position:absolute; top:60px; left:50%; transform:translateX(-50%);
+  background:#F0DEC2cc; border:1.5px solid #C6C3DC; border-radius:8px;
+  padding:5px 18px; color:#4F4261; font-size:13px; font-weight:700;
+  pointer-events:none; opacity:0; transition:opacity 0.5s;
+}
+
+/* Dialogue box */
+#dialogue {
+  position:fixed; bottom:0; left:0; right:0; z-index:25;
+  background:#F0DEC2; border-top:3px solid #EB6259;
+  padding:16px 24px 20px; display:none;
+  font-family:'Nunito',sans-serif;
+}
+#dialogue-text { color:#4F4261; font-size:15px; font-weight:600; line-height:1.5; }
+#dialogue-close {
+  margin-top:10px; background:#EB6259; color:#F0DEC2; border:none;
+  border-radius:8px; padding:7px 22px; font-family:'Nunito',sans-serif;
+  font-size:14px; font-weight:700; cursor:pointer;
+}
+#dialogue-close:hover { background:#4F4261; }
+
+/* Screens */
+.screen {
+  position:fixed; inset:0; z-index:50; display:flex;
+  align-items:center; justify-content:center;
+  font-family:'Nunito',sans-serif;
+  transition:opacity 0.6s;
+}
+.screen.hidden { opacity:0; pointer-events:none; }
+
+#title-screen {
+  background:linear-gradient(160deg,#9B9AE2 0%,#C6C3DC 50%,#F29FD7 100%);
+}
+.title-panel {
+  background:#F0DEC2; border:2.5px solid #C6C3DC; border-radius:18px;
+  padding:40px 48px; text-align:center; max-width:480px; width:90%;
+  box-shadow:0 8px 40px rgba(79,66,97,0.3);
+  position:relative;
+}
+.title-panel h1 {
+  color:#4F4261; font-size:32px; font-weight:800; margin-bottom:6px;
+  line-height:1.2;
+}
+.title-panel .subtitle { color:#9B9AE2; font-size:15px; font-weight:600; margin-bottom:24px; }
+.title-panel p { color:#4F4261; font-size:13px; margin-bottom:28px; line-height:1.6; }
+.btn-primary {
+  background:#EB6259; color:#F0DEC2; border:none; border-radius:10px;
+  padding:13px 36px; font-family:'Nunito',sans-serif;
+  font-size:16px; font-weight:800; cursor:pointer; margin:6px;
+  transition:background 0.2s, transform 0.1s;
+}
+.btn-primary:hover { background:#4F4261; transform:scale(1.04); }
+.btn-secondary {
+  background:#9B9AE2; color:#F0DEC2; border:none; border-radius:10px;
+  padding:10px 24px; font-family:'Nunito',sans-serif;
+  font-size:14px; font-weight:700; cursor:pointer; margin:6px;
+  transition:background 0.2s;
+}
+.btn-secondary:hover { background:#4F4261; }
+.deco-flowers { font-size:28px; margin-bottom:12px; }
+
+/* Map screen */
+#map-screen { background:rgba(79,66,97,0.85); }
+.map-panel {
+  background:#F0DEC2; border:3px solid #C6C3DC; border-radius:18px;
+  padding:30px; max-width:560px; width:95%;
+  box-shadow:0 8px 40px rgba(79,66,97,0.4);
+  position:relative; overflow:hidden;
+}
+.map-panel h2 { color:#4F4261; font-size:22px; font-weight:800; text-align:center; margin-bottom:18px; }
+#map-canvas { display:block; width:100%; border-radius:12px; }
+.map-close {
+  margin-top:16px; display:block; width:100%;
+  background:#EB6259; color:#F0DEC2; border:none; border-radius:10px;
+  padding:11px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700;
+  cursor:pointer;
+}
+.map-close:hover { background:#4F4261; }
+
+/* Win screen */
+#win-screen {
+  background:linear-gradient(160deg,#EBB21A22,#9B9AE2 40%,#F29FD7 100%);
+}
+.win-panel {
+  background:#F0DEC2; border:2.5px solid #EBB21A; border-radius:18px;
+  padding:44px 52px; text-align:center; max-width:480px; width:90%;
+  box-shadow:0 8px 60px rgba(235,178,26,0.4);
+}
+.win-panel h1 { color:#4F4261; font-size:30px; font-weight:800; margin-bottom:8px; }
+.win-panel .sub { color:#9B9AE2; font-size:16px; margin-bottom:20px; }
+.win-panel p { color:#4F4261; font-size:14px; margin-bottom:28px; line-height:1.6; }
+
+/* Mobile controls */
+#mobile-controls {
+  position:fixed; bottom:24px; left:0; right:0; z-index:30;
+  display:none; justify-content:space-between; align-items:flex-end;
+  padding:0 24px; pointer-events:none;
+}
+#joystick-zone {
+  width:110px; height:110px; pointer-events:all;
+  position:relative;
+}
+#joystick-base {
+  width:110px; height:110px; border-radius:50%;
+  background:rgba(240,222,194,0.35); border:2px solid rgba(240,222,194,0.6);
+  position:absolute;
+}
+#joystick-thumb {
+  width:44px; height:44px; border-radius:50%;
+  background:#F0DEC2cc; border:2px solid #EB6259;
+  position:absolute; top:33px; left:33px;
+  transition:none;
+}
+#action-btn {
+  width:72px; height:72px; border-radius:50%;
+  background:#EB6259cc; border:2.5px solid #F0DEC2;
+  font-size:26px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; pointer-events:all; color:#F0DEC2; font-weight:800;
+  font-family:'Nunito',sans-serif;
+  user-select:none; -webkit-user-select:none;
+}
+#map-btn {
+  width:56px; height:56px; border-radius:50%;
+  background:#9B9AE2cc; border:2px solid #F0DEC2;
+  font-size:22px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; pointer-events:all; color:#F0DEC2;
+  user-select:none; -webkit-user-select:none;
+  margin-bottom:8px;
+}
+.right-btns { display:flex; flex-direction:column; align-items:center; gap:8px; }
+
+/* Screen flash */
+#flash { position:fixed; inset:0; z-index:60; pointer-events:none; opacity:0; background:#9B9AE2; }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="grain"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="crystal-bar">
+    <span class="label">Crystals</span>
+    <svg class="gem" id="g0" viewBox="0 0 20 20"><polygon points="10,2 18,8 14,18 6,18 2,8" fill="#C6C3DC" stroke="#9B9AE2" stroke-width="1.5"/></svg>
+    <svg class="gem" id="g1" viewBox="0 0 20 20"><polygon points="10,2 18,8 14,18 6,18 2,8" fill="#C6C3DC" stroke="#9B9AE2" stroke-width="1.5"/></svg>
+    <svg class="gem" id="g2" viewBox="0 0 20 20"><polygon points="10,2 18,8 14,18 6,18 2,8" fill="#C6C3DC" stroke="#9B9AE2" stroke-width="1.5"/></svg>
+    <svg class="gem" id="g3" viewBox="0 0 20 20"><polygon points="10,2 18,8 14,18 6,18 2,8" fill="#C6C3DC" stroke="#9B9AE2" stroke-width="1.5"/></svg>
+    <svg class="gem" id="g4" viewBox="0 0 20 20"><polygon points="10,2 18,8 14,18 6,18 2,8" fill="#C6C3DC" stroke="#9B9AE2" stroke-width="1.5"/></svg>
+  </div>
+  <div id="score-box">
+    <span class="coin">🪙</span>
+    <span class="val" id="score-val">0</span>
+  </div>
+  <button id="sound-btn" onclick="toggleSound()">🔊</button>
+  <div id="island-label" id="island-label">Mossy Forest</div>
+</div>
+
+<!-- Dialogue -->
+<div id="dialogue">
+  <div id="dialogue-text"></div>
+  <button id="dialogue-close" onclick="closeDialogue()">Continue ✨</button>
+</div>
+
+<!-- Title Screen -->
+<div class="screen" id="title-screen">
+  <div class="title-panel">
+    <div class="deco-flowers">🌸 🌿 🔮</div>
+    <h1>Whimsical Island<br>Adventure</h1>
+    <div class="subtitle">A cozy isometric exploration game</div>
+    <p>Explore 6 magical islands across a pastel archipelago.<br>Collect 5 glowing crystals on each island<br>to unlock the next destination.</p>
+    <button class="btn-primary" onclick="startGame()">✨ Begin Adventure</button>
+    <br>
+    <button class="btn-secondary" onclick="showMap()">🗺 View Map</button>
+  </div>
+</div>
+
+<!-- Map Screen -->
+<div class="screen hidden" id="map-screen">
+  <div class="map-panel">
+    <h2>🗺 The Archipelago</h2>
+    <canvas id="map-canvas" width="500" height="340"></canvas>
+    <button class="map-close" onclick="hideMap()">⚓ Set Sail!</button>
+  </div>
+</div>
+
+<!-- Win Screen -->
+<div class="screen hidden" id="win-screen">
+  <div class="win-panel">
+    <div style="font-size:40px;margin-bottom:12px">🏆✨🌟</div>
+    <h1>Adventure Complete!</h1>
+    <div class="sub">All 6 Islands Explored!</div>
+    <p>You've collected all 30 crystals across the archipelago.<br>The islands shine with magic thanks to your journey!</p>
+    <button class="btn-primary" onclick="restartGame()">🌸 Play Again</button>
+    <button class="btn-secondary" onclick="showMap()">🗺 View Map</button>
+  </div>
+</div>
+
+<!-- Mobile Controls -->
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base"></div>
+    <div id="joystick-thumb"></div>
+  </div>
+  <div class="right-btns">
+    <div id="map-btn" ontouchstart="showMap()">🗺</div>
+    <div id="action-btn">E</div>
+  </div>
+</div>
+
+<div id="flash"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== CONSTANTS =====================
+const PALETTE = {
+  softPurple:   0x9B9AE2, softPurpleC:   '#9B9AE2',
+  coralRed:     0xEB6259, coralRedC:     '#EB6259',
+  softLavender: 0xC6C3DC, softLavenderC: '#C6C3DC',
+  goldenYellow: 0xEBB21A, goldenYellowC: '#EBB21A',
+  warmCream:    0xF0DEC2, warmCreamC:    '#F0DEC2',
+  deepPlum:     0x4F4261, deepPlumC:     '#4F4261',
+  oliveGreen:   0x6F7E4A, oliveGreenC:   '#6F7E4A',
+  softPink:     0xF29FD7, softPinkC:     '#F29FD7',
+};
+
+const ISLANDS_DATA = [
+  { id:0, name:'Mossy Forest',       biome:'forest',   skyC:0x9B9AE2, groundC:0x6F7E4A, accentC:0xC6C3DC, fogC:'#9B9AE2' },
+  { id:1, name:'Sunflower Beach',    biome:'beach',    skyC:0xEBB21A, groundC:0xF0DEC2, accentC:0xC6C3DC, fogC:'#EBB21A' },
+  { id:2, name:'Sakura Cove',        biome:'sakura',   skyC:0x4F4261, groundC:0x9B9AE2, accentC:0xEB6259, fogC:'#4F4261' },
+  { id:3, name:'Cozy Village',       biome:'village',  skyC:0xC6C3DC, groundC:0xF0DEC2, accentC:0xEB6259, fogC:'#C6C3DC' },
+  { id:4, name:'Crystal Cave',       biome:'cave',     skyC:0x4F4261, groundC:0x9B9AE2, accentC:0xF29FD7, fogC:'#4F4261' },
+  { id:5, name:'Lavender Highlands', biome:'lavender', skyC:0x9B9AE2, groundC:0xC6C3DC, accentC:0xF29FD7, fogC:'#9B9AE2' },
+];
+
+const GRID = 12;
+const TILE = 1.0;
+const CRYSTALS_PER = 5;
+
+// ===================== STATE =====================
+let scene, camera, renderer, clock;
+let gameState = 'title'; // title | playing | map | win
+let currentIslandIdx = 0;
+let islandsUnlocked = [true,false,false,false,false,false];
+let islandsComplete = [false,false,false,false,false,false];
+let crystalsCollected = 0; // on current island
+let totalScore = 0;
+let soundOn = true;
+let audioCtx = null;
+let time = 0;
+
+// Scene objects
+let playerMesh, playerGroup;
+let crystalMeshes = [];
+let particleSystems = [];
+let decorObjects = [];
+let tileGrid = [];
+let clouds = [];
+let fireflies = [];
+
+// Input
+const keys = {};
+let lastInteract = false;
+let playerGridX = 5, playerGridZ = 5;
+let playerWorldX = 5, playerWorldZ = 5;
+let playerVX = 0, playerVZ = 0;
+const MOVE_SPEED = 4.0;
+
+// Mobile joystick
+let joyActive = false, joyStartX=0, joyStartY=0, joyDX=0, joyDZ=0;
+
+// ===================== AUDIO =====================
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTone(freq, dur, type='sine', vol=0.18, delay=0) {
+  if (!soundOn || !audioCtx) return;
+  const t = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.type = type; osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol, t+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  osc.start(t); osc.stop(t+dur+0.05);
+}
+
+function playCrystalCollect() {
+  if (!soundOn || !audioCtx) return;
+  // C→E→G arpeggio shimmer
+  [523.25, 659.25, 783.99, 1046.5].forEach((f,i) => playTone(f, 0.4, 'sine', 0.15, i*0.09));
+  playTone(1568, 0.6, 'sine', 0.08, 0.3);
+}
+
+function playIslandUnlock() {
+  if (!soundOn || !audioCtx) return;
+  [261.63,329.63,392,523.25,659.25,783.99].forEach((f,i)=>playTone(f,0.7,'sine',0.13,i*0.07));
+}
+
+function playFootstep() {
+  if (!soundOn || !audioCtx) return;
+  const f = 180 + Math.random()*40;
+  playTone(f, 0.06, 'triangle', 0.05);
+}
+
+function playUIClick() {
+  if (!soundOn || !audioCtx) return;
+  playTone(880, 0.08, 'sine', 0.1);
+}
+
+function playDialogueOpen() {
+  if (!soundOn || !audioCtx) return;
+  playTone(660, 0.15, 'sine', 0.1);
+  playTone(880, 0.15, 'sine', 0.08, 0.1);
+}
+
+function playDamage() {
+  if (!soundOn || !audioCtx) return;
+  playTone(120, 0.25, 'sawtooth', 0.12);
+}
+
+// Ambient music - pentatonic drone
+let ambientNodes = [];
+function startAmbient() {
+  if (!soundOn || !audioCtx) return;
+  stopAmbient();
+  const scale = [261.63, 293.66, 329.63, 392.00, 440.00];
+  ambientNodes = scale.map((f,i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 800;
+    osc.connect(filt); filt.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = f * (i%2===0?1:0.5);
+    gain.gain.value = 0.018 + Math.random()*0.01;
+    osc.start();
+    return {osc,gain};
+  });
+  // gentle plucked melody loop
+  scheduleMelody();
+}
+
+let melodyTimeout = null;
+function scheduleMelody() {
+  if (!soundOn || !audioCtx) return;
+  const pentatonic = [523.25,587.33,659.25,783.99,880.00,1046.5];
+  const n = pentatonic[Math.floor(Math.random()*pentatonic.length)];
+  playTone(n, 0.5, 'sine', 0.06 + Math.random()*0.04);
+  melodyTimeout = setTimeout(scheduleMelody, 400 + Math.random()*900);
+}
+
+function stopAmbient() {
+  ambientNodes.forEach(n=>{ try{n.osc.stop();n.gain.disconnect();}catch(e){} });
+  ambientNodes = [];
+  if (melodyTimeout) { clearTimeout(melodyTimeout); melodyTimeout=null; }
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+  if (soundOn && audioCtx) startAmbient();
+  else stopAmbient();
+}
+
+// ===================== THREE.JS SETUP =====================
+function initThree() {
+  scene = new THREE.Scene();
+  clock = new THREE.Clock();
+
+  const aspect = window.innerWidth / window.innerHeight;
+  const d = 10;
+  camera = new THREE.OrthographicCamera(-d*aspect, d*aspect, d, -d, 0.1, 1000);
+  camera.position.set(10, 10, 10);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = false; // flat style - no hard shadows
+
+  window.addEventListener('resize', onResize);
+}
+
+function onResize() {
+  const aspect = window.innerWidth / window.innerHeight;
+  const d = 10;
+  camera.left = -d*aspect; camera.right = d*aspect;
+  camera.top = d; camera.bottom = -d;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ===================== LIGHTING =====================
+function setupLighting(islandIdx) {
+  // Remove old lights
+  scene.children.filter(c=>c.isLight).forEach(l=>scene.remove(l));
+  const isCave = ISLANDS_DATA[islandIdx].biome === 'cave';
+  const ambient = new THREE.AmbientLight(0xF0DEC2, isCave ? 0.3 : 0.6);
+  const sun = new THREE.DirectionalLight(0xEBB21A, isCave ? 0.2 : 0.8);
+  sun.position.set(20, 30, 20);
+  sun.castShadow = false;
+  const hemi = new THREE.HemisphereLight(
+    ISLANDS_DATA[islandIdx].skyC,
+    ISLANDS_DATA[islandIdx].groundC,
+    0.5
+  );
+  scene.add(ambient, sun, hemi);
+  if (isCave) {
+    const pt = new THREE.PointLight(0xF29FD7, 1.5, 20);
+    pt.position.set(6,3,6);
+    scene.add(pt);
+  }
+}
+
+// ===================== TERRAIN =====================
+function hex2color(hex) { return new THREE.Color(hex); }
+
+function buildIsland(idx) {
+  // Clear scene (keep lights)
+  scene.children.filter(c=>!c.isLight).forEach(c=>scene.remove(c));
+  crystalMeshes = [];
+  particleSystems = [];
+  decorObjects = [];
+  tileGrid = [];
+  clouds = [];
+  fireflies = [];
+
+  const isl = ISLANDS_DATA[idx];
+  scene.background = new THREE.Color(isl.skyC);
+  scene.fog = new THREE.Fog(isl.skyC, 25, 60);
+
+  setupLighting(idx);
+
+  // Ground tiles
+  const groundGeo = new THREE.BoxGeometry(TILE*0.98, 0.22, TILE*0.98);
+  const groundMat = new THREE.MeshLambertMaterial({ color: isl.groundC });
+
+  const variantColors = getBiomeVariants(isl.biome);
+
+  for (let z=0; z<GRID; z++) {
+    tileGrid[z] = [];
+    for (let x=0; x<GRID; x++) {
+      const col = variantColors[Math.floor(Math.random()*variantColors.length)];
+      const mat = new THREE.MeshLambertMaterial({ color: col });
+      const tile = new THREE.Mesh(groundGeo, mat);
+      tile.position.set(x*TILE - GRID*TILE/2 + TILE/2, 0, z*TILE - GRID*TILE/2 + TILE/2);
+      scene.add(tile);
+      tileGrid[z][x] = tile;
+    }
+  }
+
+  // Border water/edge
+  buildBorderEdge(isl);
+
+  // Decorations
+  buildBiomeDecorations(isl, idx);
+
+  // Crystals
+  spawnCrystals(idx);
+
+  // Ambient particles
+  buildAmbientParticles(isl);
+
+  // Clouds
+  buildClouds(isl);
+
+  // Player
+  if (!playerGroup) buildPlayer();
+  else scene.add(playerGroup);
+  playerGridX = Math.floor(GRID/2);
+  playerGridZ = Math.floor(GRID/2);
+  playerWorldX = playerGridX * TILE - GRID*TILE/2 + TILE/2;
+  playerWorldZ = playerGridZ * TILE - GRID*TILE/2 + TILE/2;
+  playerGroup.position.set(playerWorldX, 0.3, playerWorldZ);
+
+  // Update island label
+  const lbl = document.getElementById('island-label');
+  lbl.textContent = isl.name;
+  lbl.style.opacity = '1';
+  setTimeout(()=>{ lbl.style.opacity='0'; }, 2500);
+
+  // Camera target
+  updateCamera();
+}
+
+function getBiomeVariants(biome) {
+  switch(biome) {
+    case 'forest':  return [0x6F7E4A, 0x7A8E52, 0x637042, 0x5A6640];
+    case 'beach':   return [0xF0DEC2, 0xEDD5AE, 0xE8CC9E, 0xF5E5CB];
+    case 'sakura':  return [0x9B9AE2, 0x8A89D0, 0xB0AFF0, 0x7770C0];
+    case 'village': return [0xF0DEC2, 0xE8D4B0, 0xDDC99E, 0xF5E5CB];
+    case 'cave':    return [0x4F4261, 0x3D3250, 0x5A4C72, 0x453858];
+    case 'lavender':return [0xC6C3DC, 0xB8B4D0, 0xD4D2E8, 0xCAC7E0];
+    default: return [0x6F7E4A];
+  }
+}
+
+function buildBorderEdge(isl) {
+  // Water border
+  const waterGeo = new THREE.PlaneGeometry(GRID*TILE + 6, GRID*TILE + 6);
+  const waterMat = new THREE.MeshLambertMaterial({ color: 0xC6C3DC, transparent:true, opacity:0.7 });
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.rotation.x = -Math.PI/2;
+  water.position.y = -0.15;
+  scene.add(water);
+  decorObjects.push({ mesh: water, type:'water', baseY:-0.15 });
+}
+
+function buildBiomeDecorations(isl, idx) {
+  const count = 18 + Math.floor(Math.random()*8);
+  for (let i=0; i<count; i++) {
+    let x = (Math.random()*(GRID-2)+1) * TILE - GRID*TILE/2 + TILE/2;
+    let z = (Math.random()*(GRID-2)+1) * TILE - GRID*TILE/2 + TILE/2;
+    // Don't place near center (player spawn)
+    if (Math.abs(x) < 2 && Math.abs(z) < 2) continue;
+    addBiomeDecor(isl.biome, x, z, i);
+  }
+}
+
+function addBiomeDecor(biome, x, z, seed) {
+  const group = new THREE.Group();
+  const r = Math.sin(seed*17.3)*0.5+0.5;
+
+  if (biome === 'forest') {
+    // Tree: trunk + round canopy
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08,0.12,0.6,6),
+      new THREE.MeshLambertMaterial({color:0x7A5C3A})
+    );
+    trunk.position.y = 0.3;
+    const canopy = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35+r*0.2,7,5),
+      new THREE.MeshLambertMaterial({color: r>0.5?0x6F7E4A:0x7A8E52})
+    );
+    canopy.position.y = 0.8;
+    group.add(trunk, canopy);
+    group.userData.bobAmp = 0.03; group.userData.bobFreq = 1.5 + r;
+    group.userData.bobOffset = seed * 0.7;
+
+  } else if (biome === 'beach') {
+    // Sunflower or shell
+    if (r > 0.4) {
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04,0.04,0.5,5),
+        new THREE.MeshLambertMaterial({color:0x6F7E4A})
+      );
+      stem.position.y = 0.25;
+      const head = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22,0.22,0.08,8),
+        new THREE.MeshLambertMaterial({color:0xEBB21A})
+      );
+      head.position.y = 0.55;
+      group.add(stem, head);
+    } else {
+      const shell = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18,6,4),
+        new THREE.MeshLambertMaterial({color:0xF29FD7})
+      );
+      shell.position.y = 0.12;
+      shell.scale.set(1,0.5,1);
+      group.add(shell);
+    }
+    group.userData.bobAmp = 0.025; group.userData.bobFreq = 1.2+r;
+    group.userData.bobOffset = seed*0.5;
+
+  } else if (biome === 'sakura') {
+    // Cherry blossom tree
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06,0.1,0.8,5),
+      new THREE.MeshLambertMaterial({color:0x7A5C3A})
+    );
+    trunk.position.y = 0.4;
+    const blossom = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3+r*0.15,7,5),
+      new THREE.MeshLambertMaterial({color:0xF29FD7})
+    );
+    blossom.position.y = 1.0;
+    group.add(trunk, blossom);
+    group.userData.bobAmp = 0.04; group.userData.bobFreq = 1.3+r;
+    group.userData.bobOffset = seed*0.6;
+
+  } else if (biome === 'village') {
+    // Cottage or lamp post
+    if (r > 0.35) {
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6,0.5,0.6),
+        new THREE.MeshLambertMaterial({color:0xF0DEC2})
+      );
+      base.position.y = 0.25;
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(0.48,0.4,4),
+        new THREE.MeshLambertMaterial({color:0xEB6259})
+      );
+      roof.position.y = 0.7;
+      roof.rotation.y = Math.PI/4;
+      group.add(base, roof);
+    } else {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04,0.04,0.8,5),
+        new THREE.MeshLambertMaterial({color:0x4F4261})
+      );
+      post.position.y = 0.4;
+      const lamp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12,7,5),
+        new THREE.MeshLambertMaterial({color:0xEBB21A, emissive:0xEBB21A, emissiveIntensity:0.6})
+      );
+      lamp.position.y = 0.9;
+      group.add(post, lamp);
+    }
+    group.userData.bobAmp = 0.015; group.userData.bobFreq = 1.0+r;
+    group.userData.bobOffset = seed*0.4;
+
+  } else if (biome === 'cave') {
+    // Crystal formation
+    const h = 0.3+r*0.5;
+    const crystal = new THREE.Mesh(
+      new THREE.ConeGeometry(0.1+r*0.08, h, 5),
+      new THREE.MeshLambertMaterial({color:0x9B9AE2, emissive:0x9B9AE2, emissiveIntensity:0.3})
+    );
+    crystal.position.y = h/2;
+    group.add(crystal);
+    group.userData.bobAmp = 0.02; group.userData.bobFreq = 2+r;
+    group.userData.bobOffset = seed*0.9;
+
+  } else if (biome === 'lavender') {
+    // Lavender bush or windmill
+    if (r > 0.5) {
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06,0.08,0.7,5),
+        new THREE.MeshLambertMaterial({color:0xF0DEC2})
+      );
+      body.position.y = 0.35;
+      const blade1 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04,0.45,0.06),
+        new THREE.MeshLambertMaterial({color:0xC6C3DC})
+      );
+      blade1.position.y = 0.85;
+      const blade2 = blade1.clone();
+      blade2.rotation.z = Math.PI/2;
+      const bladeGroup = new THREE.Group();
+      bladeGroup.add(blade1,blade2);
+      bladeGroup.position.y = 0.7;
+      body.userData.isWindmill = true;
+      group.add(body, bladeGroup);
+      group.userData.bladeGroup = bladeGroup;
+    } else {
+      const bush = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22+r*0.1,6,4),
+        new THREE.MeshLambertMaterial({color:0xC6C3DC})
+      );
+      bush.position.y = 0.15;
+      bush.scale.set(1,0.7,1);
+      group.add(bush);
+    }
+    group.userData.bobAmp = 0.02; group.userData.bobFreq = 1.4+r;
+    group.userData.bobOffset = seed*0.55;
+  }
+
+  group.position.set(x, 0.11, z);
+  scene.add(group);
+  decorObjects.push({ mesh:group, type:'decor', biome, seed, baseY:0.11 });
+}
+
+// ===================== CRYSTALS =====================
+function spawnCrystals(islandIdx) {
+  crystalMeshes = [];
+  const placed = [];
+  let attempts = 0;
+  while (placed.length < CRYSTALS_PER && attempts < 200) {
+    attempts++;
+    const gx = 1 + Math.floor(Math.random()*(GRID-2));
+    const gz = 1 + Math.floor(Math.random()*(GRID-2));
+    // Keep away from center spawn and each other
+    const wx = gx*TILE - GRID*TILE/2 + TILE/2;
+    const wz = gz*TILE - GRID*TILE/2 + TILE/2;
+    if (Math.abs(wx)<2.5 && Math.abs(wz)<2.5) continue;
+    if (placed.some(p=>Math.abs(p[0]-gx)<2&&Math.abs(p[1]-gz)<2)) continue;
+    placed.push([gx,gz]);
+
+    const cGroup = new THREE.Group();
+    // Crystal gem
+    const gemGeo = new THREE.OctahedronGeometry(0.22, 0);
+    const gemMat = new THREE.MeshLambertMaterial({
+      color: 0x9B9AE2,
+      emissive: 0x9B9AE2,
+      emissiveIntensity: 0.5,
+      transparent: true,
+      opacity: 0.92
+    });
+    const gem = new THREE.Mesh(gemGeo, gemMat);
+    gem.position.y = 0.5;
+    cGroup.add(gem);
+
+    // Glow ring
+    const ringGeo = new THREE.TorusGeometry(0.18, 0.03, 6, 12);
+    const ringMat = new THREE.MeshLambertMaterial({color:0xEBB21A, emissive:0xEBB21A, emissiveIntensity:0.8});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI/2;
+    ring.position.y = 0.25;
+    cGroup.add(ring);
+
+    // Orbiting particles
+    const orbGeo = new THREE.SphereGeometry(0.05,4,3);
+    for (let o=0; o<3; o++) {
+      const orbMat = new THREE.MeshLambertMaterial({
+        color: o%2===0 ? 0xF29FD7 : 0xEBB21A,
+        emissive: o%2===0 ? 0xF29FD7 : 0xEBB21A,
+        emissiveIntensity: 0.7
+      });
+      const orb = new THREE.Mesh(orbGeo, orbMat);
+      orb.userData.orbAngle = (o/3)*Math.PI*2;
+      orb.userData.orbRadius = 0.32;
+      orb.userData.orbSpeed = 1.4 + o*0.3;
+      cGroup.add(orb);
+    }
+
+    cGroup.position.set(wx, 0.11, wz);
+    cGroup.userData = { ...cGroup.userData, isCollected:false, baseY:0.11, bobOffset:placed.length*1.3 };
+    scene.add(cGroup);
+    crystalMeshes.push(cGroup);
+  }
+}
+
+// ===================== PLAYER =====================
+function buildPlayer() {
+  playerGroup = new THREE.Group();
+
+  // Body - cream rounded
+  const bodyGeo = new THREE.SphereGeometry(0.22, 8, 6);
+  const bodyMat = new THREE.MeshLambertMaterial({color: 0xF0DEC2});
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.22;
+  body.scale.set(1, 1.15, 1);
+  playerGroup.add(body);
+
+  // Head
+  const headGeo = new THREE.SphereGeometry(0.18, 8, 6);
+  const headMat = new THREE.MeshLambertMaterial({color: 0xF0DEC2});
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 0.56;
+  playerGroup.add(head);
+
+  // Dusty rose scarf
+  const scarfGeo = new THREE.TorusGeometry(0.19, 0.055, 6, 10);
+  const scarfMat = new THREE.MeshLambertMaterial({color: 0xEB6259});
+  const scarf = new THREE.Mesh(scarfGeo, scarfMat);
+  scarf.position.y = 0.41;
+  scarf.rotation.x = Math.PI*0.15;
+  playerGroup.add(scarf);
+
+  // Golden lantern
+  const lantGeo = new THREE.SphereGeometry(0.09, 6, 5);
+  const lantMat = new THREE.MeshLambertMaterial({color:0xEBB21A, emissive:0xEBB21A, emissiveIntensity:0.7});
+  const lantern = new THREE.Mesh(lantGeo, lantMat);
+  lantern.position.set(0.25, 0.3, 0);
+  playerGroup.add(lantern);
+
+  // Lantern glow light
+  const lantLight = new THREE.PointLight(0xEBB21A, 0.8, 3.5);
+  lantLight.position.set(0.25, 0.3, 0);
+  playerGroup.userData.lantLight = lantLight;
+  playerGroup.add(lantLight);
+
+  playerGroup.position.set(0, 0.3, 0);
+  scene.add(playerGroup);
+}
+
+// ===================== AMBIENT PARTICLES =====================
+function buildAmbientParticles(isl) {
+  const isMobile = window.innerWidth < 768;
+  const count = isMobile ? 80 : 200;
+  const positions = new Float32Array(count*3);
+  const colors = new Float32Array(count*3);
+  const sizes = new Float32Array(count);
+
+  const c1 = new THREE.Color(PALETTE.softPurple);
+  const c2 = new THREE.Color(PALETTE.softPink);
+
+  for (let i=0; i<count; i++) {
+    positions[i*3]   = (Math.random()-0.5)*GRID*TILE;
+    positions[i*3+1] = 0.3 + Math.random()*3.5;
+    positions[i*3+2] = (Math.random()-0.5)*GRID*TILE;
+    const cc = Math.random()>0.5 ? c1 : c2;
+    colors[i*3]=cc.r; colors[i*3+1]=cc.g; colors[i*3+2]=cc.b;
+    sizes[i] = 0.04 + Math.random()*0.06;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  const mat = new THREE.PointsMaterial({ vertexColors:true, size:0.12, transparent:true, opacity:0.7, sizeAttenuation:true });
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  particleSystems.push({ mesh:pts, type:'ambient', count, speed:0.15, basePositions: positions.slice() });
+}
+
+function buildClouds(isl) {
+  const cloudCount = 5;
+  for (let i=0; i<cloudCount; i++) {
+    const cGroup = new THREE.Group();
+    const puffs = 3 + Math.floor(Math.random()*3);
+    for (let p=0; p<puffs; p++) {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5+Math.random()*0.4,7,5),
+        new THREE.MeshLambertMaterial({color:0xC6C3DC, transparent:true, opacity:0.75})
+      );
+      puff.position.set((p-puffs/2)*0.6+Math.random()*0.3, Math.random()*0.25, Math.random()*0.2);
+      cGroup.add(puff);
+    }
+    cGroup.position.set((Math.random()-0.5)*14, 5+Math.random()*3, (Math.random()-0.5)*14);
+    cGroup.userData = { baseX: cGroup.position.x, driftOffset: i*1.2, driftSpeed:0.15+Math.random()*0.1 };
+    scene.add(cGroup);
+    clouds.push(cGroup);
+  }
+}
+
+// ===================== CAMERA =====================
+function updateCamera() {
+  if (!playerGroup) return;
+  const tx = playerGroup.position.x;
+  const tz = playerGroup.position.z;
+  camera.position.set(tx+10, 10, tz+10);
+  camera.lookAt(tx, 0, tz);
+}
+
+// ===================== INPUT =====================
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code==='KeyM') { gameState==='playing'?showMap():hideMap(); }
+});
+document.addEventListener('keyup', e => { keys[e.code]=false; });
+
+// Mobile joystick
+const joyZone = document.getElementById('joystick-zone');
+const joyThumb = document.getElementById('joystick-thumb');
+joyZone.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  joyActive=true;
+  joyStartX=e.touches[0].clientX;
+  joyStartY=e.touches[0].clientY;
+},{passive:false});
+joyZone.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(!joyActive)return;
+  const dx=e.touches[0].clientX-joyStartX;
+  const dy=e.touches[0].clientY-joyStartY;
+  const dist=Math.min(36,Math.sqrt(dx*dx+dy*dy));
+  const angle=Math.atan2(dy,dx);
+  joyDX=Math.cos(angle)*(dist/36);
+  joyDZ=Math.sin(angle)*(dist/36);
+  joyThumb.style.left=(33+joyDX*33)+'px';
+  joyThumb.style.top=(33+joyDZ*33)+'px';
+},{passive:false});
+const endJoy=()=>{
+  joyActive=false; joyDX=0; joyDZ=0;
+  joyThumb.style.left='33px'; joyThumb.style.top='33px';
+};
+joyZone.addEventListener('touchend',endJoy);
+joyZone.addEventListener('touchcancel',endJoy);
+
+// Action button
+document.getElementById('action-btn').addEventListener('touchstart',e=>{
+  e.preventDefault(); tryInteract();
+},{passive:false});
+
+// ===================== HUD UPDATE =====================
+function updateHUD() {
+  const collected = crystalMeshes.filter(c=>c.userData.isCollected).length;
+  for (let i=0; i<5; i++) {
+    const gem = document.getElementById('g'+i);
+    if (i < collected) {
+      gem.querySelector('polygon').setAttribute('fill','#9B9AE2');
+    } else {
+      gem.querySelector('polygon').setAttribute('fill','#C6C3DC');
+    }
+  }
+  document.getElementById('score-val').textContent = totalScore;
+}
+
+// ===================== COLLECT CRYSTAL =====================
+let footstepTimer = 0;
+
+function collectCrystal(cGroup) {
+  if (cGroup.userData.isCollected) return;
+  cGroup.userData.isCollected = true;
+  initAudio();
+  playCrystalCollect();
+  totalScore += 10;
+
+  // Scale pop animation
+  cGroup.userData.popAnim = { t:0, dur:0.3, from:1.0, to:1.3, back:1.0 };
+
+  // Burst particles
+  spawnBurst(cGroup.position.clone(), 0xF29FD7, 0xEBB21A);
+
+  updateHUD();
+
+  // Check island complete
+  const allDone = crystalMeshes.every(c=>c.userData.isCollected);
+  if (allDone) {
+    setTimeout(()=>onIslandComplete(), 600);
+  }
+}
+
+function spawnBurst(pos, col1, col2) {
+  const count = 18;
+  const positions = new Float32Array(count*3);
+  const vels = [];
+  for (let i=0; i<count; i++) {
+    positions[i*3]=pos.x; positions[i*3+1]=pos.y+0.5; positions[i*3+2]=pos.z;
+    const angle=Math.random()*Math.PI*2;
+    const spd=1.5+Math.random()*2;
+    vels.push({x:Math.cos(angle)*spd, y:1.5+Math.random()*2, z:Math.sin(angle)*spd});
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  const mat = new THREE.PointsMaterial({color:col1, size:0.18, transparent:true, opacity:1.0});
+  const pts = new THREE.Points(geo,mat);
+  scene.add(pts);
+  particleSystems.push({mesh:pts, type:'burst', count, vels, age:0, maxAge:1.0, positions});
+}
+
+function onIslandComplete() {
+  islandsComplete[currentIslandIdx] = true;
+  totalScore += 50;
+
+  if (currentIslandIdx < 5) {
+    islandsUnlocked[currentIslandIdx+1] = true;
+    initAudio();
+    playIslandUnlock();
+    showDialogue(`🌟 Island complete! You've collected all 5 crystals on ${ISLANDS_DATA[currentIslandIdx].name}!\n\n✨ ${ISLANDS_DATA[currentIslandIdx+1].name} is now unlocked! Open the map (M) to travel there.`);
+    updateHUD();
+  } else {
+    // Win!
+    initAudio();
+    playIslandUnlock();
+    spawnBurst(new THREE.Vector3(0,1,0), 0xEBB21A, 0xF29FD7);
+    setTimeout(()=>{
+      gameState='win';
+      document.getElementById('win-screen').classList.remove('hidden');
+      stopAmbient();
+      [523.25,659.25,783.99,1046.5,1318.51].forEach((f,i)=>playTone(f,1.2,'sine',0.2,i*0.12));
+    }, 1200);
+  }
+}
+
+// ===================== INTERACTION =====================
+function tryInteract() {
+  if (gameState !== 'playing') return;
+  // Check proximity to crystals
+  for (const cg of crystalMeshes) {
+    if (cg.userData.isCollected) continue;
+    const dx = playerGroup.position.x - cg.position.x;
+    const dz = playerGroup.position.z - cg.position.z;
+    if (Math.sqrt(dx*dx+dz*dz) < 1.1) {
+      collectCrystal(cg);
+      return;
+    }
+  }
+  // Check map entrance (edge of grid)
+  const px = playerGroup.position.x;
+  const pz = playerGroup.position.z;
+  const edge = GRID*TILE/2 - 0.5;
+  if (Math.abs(px)>edge || Math.abs(pz)>edge) {
+    showMap();
+  }
+}
+
+// ===================== GAME LOOP =====================
+let prevTime = 0;
+let animFrameId = null;
+function gameLoop(ts) {
+  animFrameId = requestAnimationFrame(gameLoop);
+  const dt = Math.min(clock.getDelta(), 0.05); // frame-rate independent, cap dt
+  time += dt;
+
+  if (gameState === 'playing') {
+    updatePlayer(dt);
+    updateCrystals(dt);
+    updateDecorations(dt);
+    updateParticles(dt);
+    updateClouds(dt);
+    updateCamera();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ===================== PLAYER UPDATE =====================
+let lastFootstep = 0;
+function updatePlayer(dt) {
+  if (!playerGroup) return;
+
+  // Input direction
+  let dx = 0, dz = 0;
+  if (keys['ArrowLeft']  || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp']    || keys['KeyW']) dz -= 1;
+  if (keys['ArrowDown']  || keys['KeyS']) dz += 1;
+
+  // Mobile joystick
+  if (joyActive) { dx += joyDX; dz += joyDZ; }
+
+  // Normalize diagonal
+  const len = Math.sqrt(dx*dx+dz*dz);
+  if (len > 0) { dx/=len; dz/=len; }
+
+  // Move
+  const spd = MOVE_SPEED;
+  playerGroup.position.x += dx * spd * dt;
+  playerGroup.position.z += dz * spd * dt;
+
+  // Clamp to grid
+  const bound = GRID*TILE/2 - 0.4;
+  playerGroup.position.x = Math.max(-bound, Math.min(bound, playerGroup.position.x));
+  playerGroup.position.z = Math.max(-bound, Math.min(bound, playerGroup.position.z));
+
+  // Idle bob
+  playerGroup.position.y = 0.3 + Math.sin(time*2.0)*0.05;
+
+  // Face direction of movement
+  if (Math.abs(dx)>0.05 || Math.abs(dz)>0.05) {
+    const targetAngle = Math.atan2(dx, dz);
+    playerGroup.rotation.y += (targetAngle - playerGroup.rotation.y)*0.18;
+
+    // Footstep sound
+    lastFootstep += dt;
+    if (lastFootstep > 0.28) {
+      playFootstep();
+      lastFootstep = 0;
+    }
+  }
+
+  // Lantern glow oscillation
+  if (playerGroup.userData.lantLight) {
+    playerGroup.userData.lantLight.intensity = 0.7 + Math.sin(time*3.0)*0.15;
+  }
+
+  // Auto-collect nearby crystals
+  for (const cg of crystalMeshes) {
+    if (cg.userData.isCollected) continue;
+    const cdx = playerGroup.position.x - cg.position.x;
+    const cdz = playerGroup.position.z - cg.position.z;
+    if (Math.sqrt(cdx*cdx+cdz*cdz) < 0.75) {
+      collectCrystal(cg);
+    }
+  }
+
+  // E key interact
+  const interactNow = keys['KeyE'] || keys['Space'];
+  if (interactNow && !lastInteract) tryInteract();
+  lastInteract = interactNow;
+}
+
+// ===================== CRYSTALS UPDATE =====================
+function updateCrystals(dt) {
+  for (const cg of crystalMeshes) {
+    if (cg.userData.isCollected) {
+      // Shrink and fade out
+      cg.scale.setScalar(Math.max(0, cg.scale.x - dt*3));
+      continue;
+    }
+
+    // Bob
+    cg.position.y = cg.userData.baseY + Math.sin(time*2.0 + cg.userData.bobOffset)*0.08;
+
+    // Spin gem
+    const gem = cg.children[0];
+    if (gem) gem.rotation.y += dt*1.2;
+
+    // Ring pulse
+    const ring = cg.children[1];
+    if (ring) {
+      const s = 1.0 + Math.sin(time*3.0 + cg.userData.bobOffset)*0.12;
+      ring.scale.setScalar(s);
+    }
+
+    // Orbit particles
+    for (let i=2; i<cg.children.length; i++) {
+      const orb = cg.children[i];
+      if (!orb.userData.orbAngle===undefined) continue;
+      orb.userData.orbAngle += orb.userData.orbSpeed * dt;
+      orb.position.x = Math.cos(orb.userData.orbAngle)*orb.userData.orbRadius;
+      orb.position.z = Math.sin(orb.userData.orbAngle)*orb.userData.orbRadius;
+      orb.position.y = 0.5 + Math.sin(orb.userData.orbAngle*2)*0.08;
+    }
+
+    // Pop animation
+    if (cg.userData.popAnim) {
+      const pa = cg.userData.popAnim;
+      pa.t += dt;
+      const frac = pa.t / pa.dur;
+      if (frac < 0.5) {
+        cg.scale.setScalar(1.0 + (pa.to-1.0)*(frac*2));
+      } else {
+        cg.scale.setScalar(pa.to - (pa.to-1.0)*((frac-0.5)*2));
+      }
+      if (pa.t >= pa.dur) { cg.scale.setScalar(1.0); cg.userData.popAnim=null; }
+    }
+  }
+}
+
+// ===================== DECORATIONS UPDATE =====================
+function updateDecorations(dt) {
+  for (const d of decorObjects) {
+    if (!d.mesh || !d.mesh.userData) continue;
+    const ud = d.mesh.userData;
+    if (ud.bobAmp) {
+      d.mesh.position.y = d.baseY + Math.sin(time*(ud.bobFreq||1.5) + (ud.bobOffset||0))*ud.bobAmp;
+    }
+    // Windmill rotation
+    if (ud.bladeGroup) {
+      ud.bladeGroup.rotation.z += dt * 1.2;
+    }
+    // Foliage sway
+    if (d.type==='decor') {
+      d.mesh.rotation.z = Math.sin(time*1.5 + (ud.bobOffset||0))*0.03;
+    }
+    // Water gentle bob
+    if (d.type==='water') {
+      d.mesh.position.y = d.baseY + Math.sin(time*0.8)*0.04;
+    }
+  }
+}
+
+// ===================== PARTICLES UPDATE =====================
+function updateParticles(dt) {
+  for (let i = particleSystems.length-1; i>=0; i--) {
+    const ps = particleSystems[i];
+    if (ps.type==='ambient') {
+      const pos = ps.mesh.geometry.attributes.position.array;
+      for (let p=0; p<ps.count; p++) {
+        pos[p*3+1] += dt*ps.speed*(0.5+Math.sin(time*0.3+p)*0.5);
+        pos[p*3]   += dt*0.05*Math.sin(time*0.2+p*0.7);
+        if (pos[p*3+1] > 4.5) {
+          pos[p*3]   = ps.basePositions[p*3];
+          pos[p*3+1] = 0.1;
+          pos[p*3+2] = ps.basePositions[p*3+2];
+        }
+      }
+      ps.mesh.geometry.attributes.position.needsUpdate = true;
+    } else if (ps.type==='burst') {
+      ps.age += dt;
+      const frac = ps.age / ps.maxAge;
+      const pos = ps.mesh.geometry.attributes.position.array;
+      for (let p=0; p<ps.count; p++) {
+        pos[p*3]   += ps.vels[p].x * dt;
+        pos[p*3+1] += ps.vels[p].y * dt;
+        pos[p*3+2] += ps.vels[p].z * dt;
+        ps.vels[p].y -= 4 * dt; // gravity
+      }
+      ps.mesh.geometry.attributes.position.needsUpdate = true;
+      ps.mesh.material.opacity = Math.max(0, 1.0 - frac);
+      if (ps.age >= ps.maxAge) {
+        scene.remove(ps.mesh);
+        particleSystems.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ===================== CLOUDS UPDATE =====================
+function updateClouds(dt) {
+  for (const c of clouds) {
+    c.position.x = c.userData.baseX + Math.sin(time*c.userData.driftSpeed + c.userData.driftOffset)*3.5;
+    c.position.y = 5 + Math.sin(time*0.3 + c.userData.driftOffset)*0.3;
+  }
+}
+
+// ===================== MAP SCREEN =====================
+function drawMapCanvas() {
+  const canvas = document.getElementById('map-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Parchment bg
+  ctx.fillStyle = '#F0DEC2';
+  ctx.fillRect(0,0,W,H);
+
+  // Grain overlay
+  for (let i=0; i<2000; i++) {
+    ctx.fillStyle = `rgba(79,66,97,${Math.random()*0.06})`;
+    ctx.fillRect(Math.random()*W, Math.random()*H, 1,1);
+  }
+
+  // Island positions (arranged in archipelago layout)
+  const positions = [
+    {x:120,y:200}, {x:300,y:260}, {x:440,y:180},
+    {x:180,y:100}, {x:360,y:80},  {x:460,y:290},
+  ];
+
+  // Dotted paths between connected islands
+  ctx.setLineDash([4,6]);
+  ctx.strokeStyle = '#4F4261';
+  ctx.lineWidth = 1.5;
+  const connections = [[0,1],[1,2],[0,3],[3,4],[4,5],[1,5],[2,5]];
+  for (const [a,b] of connections) {
+    ctx.beginPath();
+    ctx.moveTo(positions[a].x, positions[a].y);
+    ctx.lineTo(positions[b].x, positions[b].y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Islands
+  const islandColors = ['#6F7E4A','#F0DEC2','#9B9AE2','#F0DEC2','#4F4261','#C6C3DC'];
+  const islandBorders = ['#6F7E4A','#EBB21A','#EB6259','#EB6259','#F29FD7','#F29FD7'];
+  for (let i=0; i<6; i++) {
+    const p = positions[i];
+    const locked = !islandsUnlocked[i];
+    const done   = islandsComplete[i];
+    const current= i===currentIslandIdx && gameState==='playing';
+
+    ctx.save();
+    ctx.globalAlpha = locked ? 0.38 : 1.0;
+
+    // Island blob
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, 34, 26, 0.2, 0, Math.PI*2);
+    ctx.fillStyle = islandColors[i];
+    ctx.fill();
+    ctx.strokeStyle = current ? '#EBB21A' : islandBorders[i];
+    ctx.lineWidth = current ? 3 : 2;
+    ctx.stroke();
+
+    // Tiny tree icons
+    ctx.fillStyle = locked ? '#9B9AE2' : islandBorders[i];
+    for (let t=0; t<3; t++) {
+      ctx.beginPath();
+      ctx.arc(p.x-12+t*12, p.y-4, 5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Island number
+    ctx.font = 'bold 11px Nunito';
+    ctx.fillStyle = '#4F4261';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${ISLANDS_DATA[i].name.split(' ')[0]}`, p.x, p.y+20);
+
+    // Lock or complete icon
+    if (locked) {
+      ctx.font = '14px serif';
+      ctx.fillText('🔒', p.x+20, p.y-18);
+    } else if (done) {
+      ctx.font = '14px serif';
+      ctx.fillText('✅', p.x+20, p.y-18);
+    }
+
+    // Current marker
+    if (current) {
+      ctx.fillStyle = '#EBB21A';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y-32, 6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.font = '12px serif';
+      ctx.fillText('📍', p.x-7, p.y-24);
+    }
+    ctx.restore();
+  }
+
+  // Compass rose
+  ctx.save();
+  ctx.translate(W-44, 44);
+  ctx.strokeStyle = '#EBB21A'; ctx.lineWidth=2;
+  [0,90,180,270].forEach(deg=>{
+    ctx.save(); ctx.rotate(deg*Math.PI/180);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-18); ctx.stroke();
+    ctx.restore();
+  });
+  ctx.font='bold 11px Nunito'; ctx.fillStyle='#4F4261'; ctx.textAlign='center';
+  ctx.fillText('N',0,-22); ctx.fillText('S',0,26); ctx.fillText('W',-26,4); ctx.fillText('E',26,4);
+  ctx.restore();
+
+  // Title
+  ctx.font='bold 13px Nunito'; ctx.fillStyle='#4F4261'; ctx.textAlign='left';
+  ctx.fillText('The Whimsical Archipelago', 12, 20);
+}
+
+function showMap() {
+  initAudio(); playDialogueOpen();
+  const prev = gameState;
+  gameState = 'map';
+  const ms = document.getElementById('map-screen');
+  ms.classList.remove('hidden');
+  drawMapCanvas();
+  // Island click to travel
+  const mc = document.getElementById('map-canvas');
+  mc.onclick = onMapClick;
+}
+
+function onMapClick(e) {
+  const canvas = document.getElementById('map-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left)*scaleX;
+  const my = (e.clientY - rect.top)*scaleY;
+
+  const positions = [
+    {x:120,y:200},{x:300,y:260},{x:440,y:180},
+    {x:180,y:100},{x:360,y:80},{x:460,y:290},
+  ];
+  for (let i=0; i<6; i++) {
+    const p = positions[i];
+    if (!islandsUnlocked[i]) continue;
+    if (Math.sqrt((mx-p.x)**2+(my-p.y)**2) < 38) {
+      travelToIsland(i);
+      return;
+    }
+  }
+}
+
+function hideMap() {
+  initAudio(); playUIClick();
+  document.getElementById('map-screen').classList.add('hidden');
+  if (gameState==='map') gameState='playing';
+}
+
+function travelToIsland(idx) {
+  if (!islandsUnlocked[idx]) return;
+  document.getElementById('map-screen').classList.add('hidden');
+  gameState='playing';
+  currentIslandIdx = idx;
+  crystalsCollected = 0;
+  buildIsland(idx);
+  updateHUD();
+  if (soundOn && audioCtx) { stopAmbient(); setTimeout(startAmbient,300); }
+}
+
+// ===================== DIALOGUE =====================
+function showDialogue(text) {
+  playDialogueOpen();
+  const d = document.getElementById('dialogue');
+  d.style.display='block';
+  document.getElementById('dialogue-text').textContent=text;
+  gameState='dialogue';
+}
+function closeDialogue() {
+  playUIClick();
+  document.getElementById('dialogue').style.display='none';
+  if (gameState==='dialogue') gameState='playing';
+}
+
+// ===================== SCREEN FLASH =====================
+function screenFlash(colorHex, dur=0.3) {
+  const f = document.getElementById('flash');
+  f.style.background = colorHex;
+  f.style.transition='none'; f.style.opacity='0.35';
+  setTimeout(()=>{ f.style.transition=`opacity ${dur}s`; f.style.opacity='0'; }, 50);
+}
+
+// ===================== GAME STATE =====================
+function startGame() {
+  initAudio();
+  playUIClick();
+  document.getElementById('title-screen').classList.add('hidden');
+  gameState='playing';
+  buildIsland(0);
+  updateHUD();
+  showDialogue("🌿 Welcome to the Mossy Forest!\n\nCollect 5 glowing crystals to unlock the next island. Walk near a crystal to collect it, or press E / tap the action button.\n\nPress M or tap the map button to see the archipelago. Good luck, adventurer! ✨");
+  if (soundOn) { startAmbient(); }
+  // Show mobile controls on touch devices
+  if ('ontouchstart' in window) {
+    document.getElementById('mobile-controls').style.display='flex';
+  }
+}
+
+function restartGame() {
+  initAudio(); playUIClick();
+  document.getElementById('win-screen').classList.add('hidden');
+  islandsUnlocked  = [true,false,false,false,false,false];
+  islandsComplete  = [false,false,false,false,false,false];
+  totalScore = 0;
+  currentIslandIdx = 0;
+  crystalsCollected = 0;
+  gameState='playing';
+  buildIsland(0);
+  updateHUD();
+  if (soundOn) { startAmbient(); }
+}
+
+// ===================== INIT =====================
+function init() {
+  initThree();
+  scene.background = new THREE.Color(0x9B9AE2);
+
+  // Placeholder scene (title bg)
+  const bgGeo = new THREE.PlaneGeometry(40,40);
+  const bgMat = new THREE.MeshLambertMaterial({color:0x6F7E4A});
+  const bgPlane = new THREE.Mesh(bgGeo, bgMat);
+  bgPlane.rotation.x = -Math.PI/2;
+  scene.add(bgPlane);
+  buildAmbientParticles(ISLANDS_DATA[0]);
+  buildClouds(ISLANDS_DATA[0]);
+  setupLighting(0);
+
+  // Animate title sparkles
+  requestAnimationFrame(gameLoop);
+}
+
+init();
+</script>
+</body>
+</html>
