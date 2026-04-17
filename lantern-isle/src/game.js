@@ -169,8 +169,8 @@ function buildIsland(islandId) {
   const scMat = new THREE.MeshBasicMaterial({ color: PALETTE.deepPlumN, transparent: true, opacity: 0.22, depthWrite: false });
   shadowCreepMesh = new THREE.Mesh(scGeo, scMat);
   shadowCreepMesh.rotation.x = -Math.PI/2;
-  shadowCreepMesh.position.set(-6, 0.05, -6);
-  shadowCreepMesh.userData = { radius: 1.5, growing: !island.restored };
+  shadowCreepMesh.position.set(5, 0.05, 5);
+  shadowCreepMesh.userData = { radius: 0.5, growing: !island.restored };
   scene.add(shadowCreepMesh);
 
   // Particles per biome
@@ -638,17 +638,18 @@ function loop(ts) {
   // Player movement
   if (state === 'playing') {
     player.update(dt, keys, (joystickDir.x||joystickDir.z) ? joystickDir : null);
-    // Bounds: keep player on island (radius ~7.5 world units)
-    const BOUND = 7.2;
+    // Bounds: keep player on island — clamp pos AND group after update
+    const BOUND = 6.5;
     player.pos.x = Math.max(-BOUND, Math.min(BOUND, player.pos.x));
     player.pos.z = Math.max(-BOUND, Math.min(BOUND, player.pos.z));
     player.group.position.x = player.pos.x;
     player.group.position.z = player.pos.z;
     // Camera follow
-    const tx = player.pos.x+12, ty = 12, tz = player.pos.z+12;
-    camera.position.x += (tx - camera.position.x) * 4 * dt;
-    camera.position.y += (ty - camera.position.y) * 4 * dt;
-    camera.position.z += (tz - camera.position.z) * 4 * dt;
+    // Fixed isometric offset — smooth follow on X/Z only, Y is always 12
+    const tx = player.pos.x+12, tz = player.pos.z+12;
+    camera.position.x += (tx - camera.position.x) * 5 * dt;
+    camera.position.z += (tz - camera.position.z) * 5 * dt;
+    camera.position.y = 12;
     camera.lookAt(player.pos.x, 0, player.pos.z);
 
     // Foliage + objects bob
@@ -691,6 +692,16 @@ function loop(ts) {
     if (abSprint && player.abilities.sprint) {
       const cd = document.querySelector('#ab-sprint .ability-cooldown');
       if (cd) cd.style.transform = `scaleY(${Math.max(0, player.sprintCooldown/4)})`;
+    }
+  }
+
+  // Auto-collect crystals on proximity
+  if (state === 'playing' && player) {
+    for (let i = crystalMeshes.length-1; i >= 0; i--) {
+      if (player.pos.distanceTo(crystalMeshes[i].position) < 1.1) {
+        collectCrystal(crystalMeshes[i]);
+        break;
+      }
     }
   }
 
