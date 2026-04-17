@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎮 Games by Kristy</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#fdf0f5;font-family:'Georgia',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;}
+    h1{font-size:2.2rem;color:#c47a8a;margin-bottom:8px;letter-spacing:1px;}
+    p.sub{color:#b09090;font-size:1rem;margin-bottom:40px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;max-width:900px;width:100%;}
+    .card{background:#fff8fa;border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(200,120,140,0.12);transition:transform 0.2s,box-shadow 0.2s;text-decoration:none;color:inherit;display:block;}
+    .card:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(200,120,140,0.22);}
+    .card .emoji{font-size:3rem;margin-bottom:12px;display:block;}
+    .card h2{font-size:1.2rem;color:#c47a8a;margin-bottom:8px;}
+    .card p{font-size:0.88rem;color:#a08080;line-height:1.5;}
+    .badge{display:inline-block;background:#f2d0da;color:#c47a8a;font-size:0.72rem;padding:3px 10px;border-radius:20px;margin-top:12px;font-family:monospace;}
+    footer{margin-top:60px;color:#c4a0a8;font-size:0.8rem;}
+  </style>
+</head>
+<body>
+  <h1>🌸 Games by Kristy</h1>
+  <p class="sub">Cozy, whimsical worlds to explore</p>
+  <div class="grid">
+    <a class="card" href="/petals-and-echoes">
+      <span class="emoji">🌸</span>
+      <h2>Petals & Echoes</h2>
+      <p>A cozy isometric puzzle game about restoring a world grown silent. Collect petals, craft spells, and explore the shadow world.</p>
+      <span class="badge">▶ Play Now</span>
+    </a>
+    <!-- Future games go here -->
+  </div>
+  <footer>© Kristy · Built with love & cozy pixels</footer>
+</body>
+</html>

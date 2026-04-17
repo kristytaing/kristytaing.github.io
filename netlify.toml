@@ -1,0 +1,12 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/petals-and-echoes"
+  to = "/games/petals-and-echoes/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/petals-and-echoes/*"
+  to = "/games/petals-and-echoes/:splat"
+  status = 200
