@@ -106,6 +106,15 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 
 /* Flash */
 #flash{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0;background:#9B9AE2;}
+#lore-popup{position:fixed;bottom:160px;left:50%;transform:translateX(-50%) scale(0.85);
+  background:linear-gradient(135deg,rgba(60,35,90,0.97),rgba(30,15,55,0.97));
+  border:2px solid rgba(235,178,26,0.7);border-radius:14px;padding:10px 20px;
+  color:#FFE44A;font-size:13px;font-weight:700;text-align:center;z-index:85;
+  pointer-events:none;opacity:0;transition:opacity 0.35s,transform 0.35s;
+  max-width:260px;line-height:1.4;}
+#save-flash{position:fixed;top:14px;right:14px;background:rgba(40,120,60,0.88);
+  border-radius:8px;padding:4px 12px;color:#B8FFB8;font-size:11px;font-weight:700;
+  z-index:95;pointer-events:none;opacity:0;transition:opacity 0.4s;}
 </style>
 </head>
 <body>
@@ -187,6 +196,8 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 </div>
 <canvas id="boat-canvas" style="position:fixed;inset:0;z-index:55;pointer-events:none;opacity:0;transition:opacity 0.3s;"></canvas>
 <div id="flash"></div>
+<div id="lore-popup"></div>
+<div id="save-flash">✓ Saved</div>
 
 <script>
 // ============================================================
@@ -1364,7 +1375,12 @@ function finishCrystalCollect(tc) {
   const {sx,sy}=ws(player.wx,player.wy);
   score+=100;
   particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
-  if(tc.lore) particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:tc.lore,isLore:true});
+  if(tc.lore) {
+    particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:tc.lore,isLore:true});
+    const lp=document.getElementById('lore-popup');
+    if(lp){lp.textContent=tc.lore;lp.style.opacity='1';lp.style.transform='translateX(-50%) scale(1)';
+      setTimeout(()=>{lp.style.opacity='0';lp.style.transform='translateX(-50%) scale(0.85)';},2800);}
+  }
   for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
   const gem=document.getElementById(`g${tc.gemIdx}`);
   if(gem){gem.querySelector('polygon').setAttribute('fill',P.lavender);gem.classList.add('lit');
@@ -1750,7 +1766,10 @@ function travelToIsland(idx){
 
 // ============= START / RESTART =============
 function saveProgress(){
-  try{localStorage.setItem('whimsical_save',JSON.stringify({currentIsland,islandsCleared,score}));}catch(e){}
+  try{localStorage.setItem('whimsical_save',JSON.stringify({currentIsland,islandsCleared,score}));
+    const sf=document.getElementById('save-flash');
+    if(sf){sf.style.opacity='1';setTimeout(()=>{sf.style.opacity='0';},1400);}
+  }catch(e){}
 }
 function loadProgress(){
   try{
