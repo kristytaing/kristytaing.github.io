@@ -586,7 +586,7 @@ document.getElementById('sound-toggle').addEventListener('click', ()=>{
   const m = toggleMute();
   document.getElementById('sound-toggle').textContent = m ? '🔇' : '🔊';
 });
-document.getElementById('dialogue-continue').addEventListener('click', ()=>{
+document.getElementById('dialogue-box').addEventListener('click', ()=>{
   if (typewriterTimer) { clearInterval(typewriterTimer); dialogueText.textContent=currentLine; dialogueContinue.style.display='block'; return; }
   advanceDialogue();
 });
@@ -606,9 +606,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   state = 'playing';
   buildIsland(0);
   setTimeout(()=>showDialogue('✨ Lantern Bearer', [
-    'Your golden lantern glows as you step onto the Mossy Forest…',
-    'Five crystal shards hide on this island. Find them, then bring them to the shrine!',
-    'Press E near objects to interact. M to open your map. Good luck!'
+    'Find 5 crystal shards, bring them to the shrine! Tap anywhere to dismiss.'
   ], null), 800);
 });
 
