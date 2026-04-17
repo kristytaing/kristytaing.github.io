@@ -1260,6 +1260,7 @@ function updatePlayer(dt) {
     if(dist<sc) collectCrystal(cx);
     else if(dist < sc*3.5) playCrystalNear();
   });
+  checkSecretCrystal();
 }
 
 function collectCrystal(cx) {
@@ -1576,7 +1577,7 @@ function loadIsland(idx){
   currentIsland=idx; crystalsCollected=0;
   for(let i=0;i<5;i++){const g=document.getElementById(`g${i}`);if(g){g.querySelector('polygon').setAttribute('fill',P.lilac);g.classList.remove('lit');}}
   player.wx=0.5;player.wy=0.78;player.facing=1;player.collectAnim=0;
-  particles=[]; ambientParticles=[]; tweenCrystals=[];
+  particles=[]; ambientParticles=[]; tweenCrystals=[]; secretCrystal=null; secretFound=false;
   buildScene(idx);spawnCrystals(idx);initClouds();initCritter();initAmbientParticles(idx);
   islandStartTime=performance.now()/1000;
   const lbl=document.getElementById('island-label');
