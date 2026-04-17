@@ -277,8 +277,8 @@ function gameLoop(timestamp){
     const snowCount = 38;
     for(let i=0;i<snowCount;i++){
       const t = GS.time*0.00035;
-      const sx2 = ((i*137.5 + t*60 + Math.sin(i*0.7)*40) % (CVS.width+20)) - 10;
-      const sy2 = ((i*73.1 + t*25 + Math.cos(i*0.4)*20) % (CVS.height+10));
+      const sx2 = ((i*137.5 + t*60 + Math.sin(i*0.7)*40) % (canvas.width+20)) - 10;
+      const sy2 = ((i*73.1 + t*25 + Math.cos(i*0.4)*20) % (canvas.height+10));
       const drift = Math.sin(t*1.2 + i*0.9)*8;
       const alpha = 0.4 + Math.sin(t*2+i)*0.25;
       const sr = 1 + (i%3)*0.5;
@@ -287,10 +287,10 @@ function gameLoop(timestamp){
       CTX.beginPath(); CTX.arc(sx2+drift, sy2, sr, 0, Math.PI*2); CTX.fill();
     }
     CTX.globalAlpha=1;
-    const fogV = CTX.createRadialGradient(CVS.width/2,CVS.height/2,CVS.height*0.28,CVS.width/2,CVS.height/2,CVS.height*0.75);
+    const fogV = CTX.createRadialGradient(canvas.width/2,canvas.height/2,canvas.height*0.28,canvas.width/2,canvas.height/2,canvas.height*0.75);
     fogV.addColorStop(0,'rgba(180,170,210,0)');
     fogV.addColorStop(1,'rgba(180,170,210,0.22)');
-    CTX.fillStyle=fogV; CTX.fillRect(0,0,CVS.width,CVS.height);
+    CTX.fillStyle=fogV; CTX.fillRect(0,0,canvas.width,canvas.height);
   }
     renderPostProcessing();
     renderHUD();
