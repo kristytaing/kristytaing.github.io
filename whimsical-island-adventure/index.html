@@ -855,7 +855,7 @@ function updateCritter(dt) {
 }
 function drawCritter(t) {
   const {sx,sy} = ws(critter.wx, critter.wy);
-  const sc = depthScale(critter.wy) * 0.55;
+  const sc = depthScale(critter.wy) * 0.85;
   const hop = critter.state==='walk' ? Math.abs(Math.sin(critter.t*9))*5*sc : Math.sin(critter.t*1.5)*1*sc;
   const flip = critter.facing;
   ctx.save();
@@ -865,17 +865,21 @@ function drawCritter(t) {
   ctx.fillStyle = rgba(P.plum, 0.15); ctx.fill();
   // Body
   ctx.beginPath(); ctx.ellipse(0, 0, 9*sc, 7*sc, 0, 0, Math.PI*2);
-  ctx.fillStyle = '#F5F0E8'; ctx.fill();
+  ctx.fillStyle = '#E8D8F0'; ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.35); ctx.lineWidth = 1.2*sc; ctx.stroke();
   // Head
   ctx.beginPath(); ctx.ellipse(flip*7*sc, -6*sc, 6*sc, 5.5*sc, 0, 0, Math.PI*2);
-  ctx.fillStyle = '#F5F0E8'; ctx.fill();
+  ctx.fillStyle = '#E8D8F0'; ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.35); ctx.lineWidth = 1.0*sc; ctx.stroke();
   // Ears
   ctx.beginPath(); ctx.ellipse(flip*5.5*sc, -13*sc, 2.2*sc, 5*sc, flip*-0.2, 0, Math.PI*2);
-  ctx.fillStyle = '#F5F0E8'; ctx.fill();
+  ctx.fillStyle = '#E8D8F0'; ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.3); ctx.lineWidth = 0.8*sc; ctx.stroke();
   ctx.beginPath(); ctx.ellipse(flip*5.5*sc, -13*sc, 1.0*sc, 3.2*sc, flip*-0.2, 0, Math.PI*2);
   ctx.fillStyle = rgba(P.coral, 0.5); ctx.fill();
   ctx.beginPath(); ctx.ellipse(flip*8.5*sc, -11*sc, 2.0*sc, 4.5*sc, flip*0.25, 0, Math.PI*2);
-  ctx.fillStyle = '#F5F0E8'; ctx.fill();
+  ctx.fillStyle = '#E8D8F0'; ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.3); ctx.lineWidth = 0.8*sc; ctx.stroke();
   ctx.beginPath(); ctx.ellipse(flip*8.5*sc, -11*sc, 0.9*sc, 2.8*sc, flip*0.25, 0, Math.PI*2);
   ctx.fillStyle = rgba(P.coral, 0.5); ctx.fill();
   // Eye
@@ -888,7 +892,8 @@ function drawCritter(t) {
   ctx.fillStyle = rgba(P.coral, 0.7); ctx.fill();
   // Tail
   ctx.beginPath(); ctx.arc(-flip*9*sc, -1*sc, 3*sc, 0, Math.PI*2);
-  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.fillStyle = '#E8D8F0'; ctx.fill();
+  ctx.strokeStyle = rgba(P.plum,0.25); ctx.lineWidth=0.8*sc; ctx.stroke();
   ctx.restore();
 }
 
@@ -1217,6 +1222,7 @@ function setupInput(){
   window.addEventListener('keydown',e=>{
     keys[e.key]=true;
     if(e.key==='m'||e.key==='M'){const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();}
+    if(e.key===' '||e.key==='Enter'){e.preventDefault();} // prevent button activation during gameplay
     if(e.key==='Escape'||e.key==='e'||e.key==='E'||e.key===' ')closeDialogue();
     if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
   });
@@ -1280,6 +1286,7 @@ function startGame(){
   initAudio();
   if(audioCtx)audioCtx.resume().then(()=>startAmbient());
   gameRunning=true;
+  if(document.activeElement) document.activeElement.blur(); // prevent space re-triggering buttons
   islandsCleared=new Array(ISLANDS.length).fill(false);
   score=0;document.getElementById('score-val').textContent='0';
   loadIsland(0);lastTime=performance.now();
