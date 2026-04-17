@@ -129,6 +129,10 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
   <button id="sound-btn" onclick="toggleSound()">🔊</button>
   <div id="island-label"></div>
   <div id="map-hint">M = Map</div>
+  <div id="bunny-hint" style="position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+    background:rgba(79,66,97,0.85);border-radius:10px;padding:5px 14px;color:#F0DEC2;
+    font-size:12px;font-weight:700;pointer-events:none;opacity:0;transition:opacity 0.3s;
+    white-space:nowrap;">🐇 Press F to say hello!</div>
 </div>
 
 <div id="dialogue" onclick="closeDialogue()">
@@ -277,6 +281,10 @@ let player = {
 // Scene objects for current island
 let crystals = [], decorations = [], particles = [], clouds = [];
 let critter = {wx:0.35, wy:0.65, tx:0.35, ty:0.65, facing:1, t:0, waitT:0, state:'idle'};
+let ambientParticles = [];
+let idleTimer = 0;
+let islandStartTime = 0;
+let critterInteracted = false;
 let crystalsCollected = 0;
 
 // ============= COLOR HELPERS =============
@@ -556,6 +564,7 @@ function drawScatteredPetals(isl, t) {
 
 // ============= CHIBI CHARACTER =============
 function drawCharacter(t) {
+  const idleLook = (player.idleT||0)>3 ? Math.sin(t*0.85)*0.1 : 0;
   const {sx, sy} = ws(player.wx, player.wy);
   const sc = depthScale(player.wy) * 1.2;
   const bob = Math.sin(player.bobT * 3.5) * 2.5 * sc;
@@ -750,9 +759,11 @@ function drawCharacter(t) {
 
 // ============= CRYSTAL =============
 function drawCrystal(cx, t) {
+  const isNight = ISLANDS[currentIsland].biome==='night';
   // Proximity to player — increase glow when close
   const pdx = cx.wx - player.wx, pdy = cx.wy - player.wy;
   const proximity = 1 - Math.min(1, Math.hypot(pdx, pdy) / 0.18);
+  const nightDim = isNight ? Math.max(0.06, proximity) : 1;
   cx._proximity = proximity; // store for use below
   if (cx.collected) return;
   const {sx, sy} = ws(cx.wx, cx.wy);
@@ -763,10 +774,12 @@ function drawCrystal(cx, t) {
   ctx.save();
   // Aura
   const ag = ctx.createRadialGradient(sx, py, 2, sx, py, 32*sc);
-  ag.addColorStop(0, rgba(P.lavender, 0.55));
+  ag.addColorStop(0, rgba(P.lavender, 0.55 * nightDim));
   ag.addColorStop(1, rgba(P.lavender, 0));
   ctx.fillStyle = ag;
+  ctx.globalAlpha = nightDim;
   ctx.beginPath(); ctx.arc(sx, py, 32*sc, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
 
   // Orbiting dots
   for (let i=0;i<5;i++) {
@@ -794,7 +807,7 @@ function drawCrystal(cx, t) {
   ctx.moveTo(-gs*0.5,-gs*0.8); ctx.lineTo(0,-gs*1.1); ctx.lineTo(-gs*0.8,-gs*0.1);
   ctx.fillStyle = lighten(P.lavender, 0.45); ctx.fill();
   // Sparkle
-  ctx.shadowColor = P.lavender; ctx.shadowBlur = 12 + (cx._proximity||0)*28;
+  ctx.shadowColor = P.lavender; ctx.shadowBlur = (12 + (cx._proximity||0)*28) * nightDim;
   ctx.beginPath(); ctx.arc(-gs*0.3,-gs*0.5,2*sc,0,Math.PI*2);
   ctx.fillStyle='#fff'; ctx.fill();
   ctx.shadowBlur=0;
@@ -882,7 +895,115 @@ function initClouds() {
 // ============= CRITTER (wandering bunny) =============
 function initCritter() {
   critter = {wx:0.35+Math.random()*0.3, wy:0.60+Math.random()*0.2,
-    tx:0.4, ty:0.65, facing:1, t:0, waitT:2+Math.random()*3, state:'idle'};
+    tx:0.4, ty:0.65, facing:1, t:0, waitT:2+Math.random()*3, state:'idle',
+    reacting:false, reactT:0};
+  critterInteracted = false;
+}
+
+function initAmbientParticles(islandIdx) {
+  ambientParticles = [];
+  const biome = ISLANDS[islandIdx].biome;
+  if (biome === 'night') {
+    for (let i=0;i<28;i++) ambientParticles.push({
+      type:'star', x:Math.random(), y:Math.random()*0.7,
+      vy:0.015+Math.random()*0.025, vx:(Math.random()-0.5)*0.008,
+      phase:Math.random()*Math.PI*2, size:1.2+Math.random()*2.5, alpha:0.4+Math.random()*0.6});
+  } else if (biome === 'desert') {
+    for (let i=0;i<22;i++) ambientParticles.push({
+      type:'ember', x:Math.random(), y:0.5+Math.random()*0.5,
+      vy:-(0.02+Math.random()*0.04), vx:(Math.random()-0.5)*0.012,
+      phase:Math.random()*Math.PI*2, size:1.5+Math.random()*2, alpha:0.5+Math.random()*0.5, life:Math.random()});
+  } else if (biome === 'forest') {
+    for (let i=0;i<18;i++) ambientParticles.push({
+      type:'firefly', x:0.05+Math.random()*0.9, y:0.35+Math.random()*0.55,
+      vx:(Math.random()-0.5)*0.006, vy:(Math.random()-0.5)*0.004,
+      phase:Math.random()*Math.PI*2, blinkRate:0.8+Math.random()*1.4, size:2.5+Math.random()*2});
+  } else if (biome === 'crystal') {
+    for (let i=0;i<20;i++) ambientParticles.push({
+      type:'mote', x:Math.random(), y:0.2+Math.random()*0.7,
+      vx:(Math.random()-0.5)*0.005, vy:-0.008-Math.random()*0.012,
+      phase:Math.random()*Math.PI*2, size:1.5+Math.random()*2.5, alpha:0.3+Math.random()*0.6});
+  } else if (biome === 'beach') {
+    for (let i=0;i<14;i++) ambientParticles.push({
+      type:'foam', x:Math.random(), y:0.72+Math.random()*0.2,
+      vx:0.008+Math.random()*0.012, vy:0,
+      phase:Math.random()*Math.PI*2, size:6+Math.random()*10, alpha:0.18+Math.random()*0.25});
+  }
+}
+
+function updateAmbientParticles(dt) {
+  ambientParticles.forEach(p => {
+    p.x += p.vx * dt * 60 * 0.016;
+    p.y += p.vy * dt * 60 * 0.016;
+    if (p.type==='ember') {
+      p.life += dt * 0.4;
+      if (p.life>1) { p.life=0; p.x=Math.random(); p.y=0.9+Math.random()*0.1; }
+    }
+    if (p.type==='star' && p.y>0.85) { p.y=Math.random()*0.15; p.x=Math.random(); }
+    if (p.type==='firefly') {
+      if (p.x<0.05||p.x>0.95) p.vx*=-1;
+      if (p.y<0.32||p.y>0.9) p.vy*=-1;
+      if (Math.random()<0.01) { p.vx+=(Math.random()-0.5)*0.003; p.vy+=(Math.random()-0.5)*0.003; }
+      p.vx=Math.max(-0.01,Math.min(0.01,p.vx)); p.vy=Math.max(-0.008,Math.min(0.008,p.vy));
+    }
+    if (p.type==='mote' && p.y<0.1) { p.y=0.8+Math.random()*0.15; p.x=Math.random(); }
+    if (p.type==='mote' && (p.x<0||p.x>1)) p.vx*=-1;
+    if (p.type==='foam' && p.x>1.1) { p.x=-0.1; p.y=0.72+Math.random()*0.2; }
+  });
+}
+
+function drawAmbientParticles(t) {
+  const biome = ISLANDS[currentIsland].biome;
+  ambientParticles.forEach(p => {
+    const sx=p.x*W, sy=H*0.18+p.y*H*0.72;
+    ctx.save();
+    if (p.type==='star') {
+      const tw=0.4+0.6*Math.abs(Math.sin(t*2.1+p.phase));
+      ctx.globalAlpha=p.alpha*tw; ctx.fillStyle='#EBB21A';
+      ctx.shadowColor='#EBB21A'; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.arc(sx,sy,p.size*tw,0,Math.PI*2); ctx.fill();
+    } else if (p.type==='ember') {
+      const fade=Math.sin(p.life*Math.PI);
+      ctx.globalAlpha=p.alpha*fade;
+      ctx.fillStyle=`rgb(${235+Math.round((1-p.life)*20)},${Math.round(100+p.life*60)},20)`;
+      ctx.shadowColor='#EB6259'; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(sx,sy,p.size*(1-p.life*0.4),0,Math.PI*2); ctx.fill();
+    } else if (p.type==='firefly') {
+      const blink=0.5+0.5*Math.sin(t*p.blinkRate*Math.PI*2+p.phase);
+      ctx.globalAlpha=blink*0.9; ctx.fillStyle='#C8F060';
+      ctx.shadowColor='#9AE040'; ctx.shadowBlur=10*blink;
+      ctx.beginPath(); ctx.arc(sx,sy,p.size*(0.6+blink*0.4),0,Math.PI*2); ctx.fill();
+    } else if (p.type==='mote') {
+      const pulse=0.5+0.5*Math.sin(t*1.8+p.phase);
+      ctx.globalAlpha=p.alpha*pulse; ctx.fillStyle='#C6C3DC';
+      ctx.shadowColor='#9B9AE2'; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(sx,sy,p.size*(0.7+pulse*0.4),0,Math.PI*2); ctx.fill();
+    } else if (p.type==='foam') {
+      const pulse=0.5+0.5*Math.sin(t*1.2+p.phase);
+      ctx.globalAlpha=p.alpha*pulse; ctx.fillStyle='#FFFFFF';
+      ctx.beginPath(); ctx.ellipse(sx,sy,p.size*(0.8+pulse*0.3),p.size*0.35,0,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  });
+  // Night fog overlay
+  if (biome==='night') {
+    const fog=ctx.createRadialGradient(W*0.5,H*0.55,H*0.05,W*0.5,H*0.55,H*0.65);
+    fog.addColorStop(0,'rgba(20,15,40,0)'); fog.addColorStop(0.5,'rgba(20,15,40,0.12)');
+    fog.addColorStop(1,'rgba(20,15,40,0.45)');
+    ctx.fillStyle=fog; ctx.fillRect(0,0,W,H);
+  }
+  // Desert heat shimmer
+  if (biome==='desert') {
+    for (let b=0;b<3;b++) {
+      const by=H*(0.55+b*0.1);
+      const sh=ctx.createLinearGradient(0,by,0,by+H*0.04);
+      const wave=Math.sin(t*2.3+b*1.5)*0.04;
+      sh.addColorStop(0,'rgba(240,180,60,0)');
+      sh.addColorStop(0.5,`rgba(240,180,60,${(0.04+wave).toFixed(3)})`);
+      sh.addColorStop(1,'rgba(240,180,60,0)');
+      ctx.fillStyle=sh; ctx.fillRect(0,by,W,H*0.04);
+    }
+  }
 }
 function updateCritter(dt) {
   critter.t += dt;
@@ -946,6 +1067,16 @@ function drawCritter(t) {
   ctx.beginPath(); ctx.arc(-flip*9*sc, -1*sc, 3*sc, 0, Math.PI*2);
   ctx.fillStyle = '#E8D8F0'; ctx.fill();
   ctx.strokeStyle = rgba(P.plum,0.25); ctx.lineWidth=0.8*sc; ctx.stroke();
+  // Reaction heart
+  if (critter.reacting) {
+    critter.reactT = (critter.reactT||0) + 0.016;
+    const ra=Math.max(0,1-critter.reactT*0.7);
+    ctx.save(); ctx.globalAlpha=ra;
+    ctx.font=`${Math.round(14*sc)}px serif`; ctx.textAlign='center';
+    ctx.fillText('💕', flip*3*sc, -18*sc - critter.reactT*18*sc);
+    ctx.restore();
+    if (critter.reactT>1.4) { critter.reacting=false; critter.reactT=0; }
+  }
   ctx.restore();
 }
 
@@ -1035,6 +1166,7 @@ function renderScene(t) {
   ctx.fillStyle=vg;
   ctx.fillRect(0,0,W,H);
   drawScatteredPetals(isl, t);
+  drawAmbientParticles(t);
 
   // Draw decorations + crystals + player sorted back-to-front
   // Build a combined draw list
@@ -1044,15 +1176,13 @@ function renderScene(t) {
   crystals.forEach(cx => { if(!cx.collected) drawList.push({wy:cx.wy, fn:()=>drawCrystal(cx,t)}); });
   drawList.push({wy:player.wy + 0.005, fn:()=>drawCharacter(t)});
 
+  drawList.push({wy:critter.wy+0.004, fn:()=>drawCritter(t)});
   drawList.sort((a,b)=>a.wy-b.wy);
   drawList.forEach(item=>{ try{item.fn();}catch(e){
     ctx.save();ctx.fillStyle='red';ctx.font='12px monospace';
     ctx.fillText('ERR: '+e.message,10,80);ctx.restore();
     console.error('drawList error:',e);
   } });
-
-  // Critter
-  drawList.push({wy:critter.wy+0.004, fn:()=>drawCritter(t)});
   drawParticles();
 }
 
@@ -1092,15 +1222,25 @@ function updatePlayer(dt) {
   const spd=0.22;
   if(dx||dy){
     player.stepT+=dt;
+    idleTimer=0;
     if(dx>0.1) player.facing=1;
     if(dx<-0.1) player.facing=-1;
+  } else {
+    idleTimer+=dt;
   }
+  player.idleT=idleTimer;
 
   player.wx = Math.max(0.04, Math.min(0.96, player.wx + dx*spd*dt));
   player.wy = Math.max(0.30, Math.min(0.95, player.wy + dy*spd*dt));
   player.bobT += dt;
   updateCritter(dt);
   player.scarfT += dt;
+  // Bunny hint visibility
+  const {sx:_phx,sy:_phy}=ws(player.wx,player.wy);
+  const {sx:_bhx,sy:_bhy}=ws(critter.wx,critter.wy);
+  const _bd=Math.hypot(_phx-_bhx,_phy-_bhy);
+  const _bh=document.getElementById('bunny-hint');
+  if(_bh) _bh.style.opacity=(!critterInteracted&&_bd<70)?'1':'0';
   if(player.collectAnim>0) player.collectAnim -= dt*3;
 
   // Crystal collection
@@ -1141,8 +1281,38 @@ function collectCrystal(cx) {
   if(crystalsCollected>=CRYSTALS_PER_ISLAND) setTimeout(onIslandComplete,600);
 }
 
+function tryBunnyInteract() {
+  if(critterInteracted) return;
+  const {sx:px,sy:py}=ws(player.wx,player.wy);
+  const {sx:bx,sy:by}=ws(critter.wx,critter.wy);
+  if(Math.hypot(px-bx,py-by)<70) {
+    critterInteracted=true;
+    critter.reacting=true; critter.reactT=0;
+    const hints=["The bunny nuzzles your hand. A crystal glows nearby… ✨",
+      "The bunny thumps — its ear points toward a sparkle! 🐇",
+      "A gentle nudge. The bunny knows where the crystals hide.",
+      "The bunny's eyes glimmer. Magic is close. 💕",
+      "It hops in a small circle, then looks up at you warmly. ✨"];
+    showDialogue(hints[Math.floor(Math.random()*hints.length)]);
+    score+=25; document.getElementById('score-val').textContent=score;
+    if(audioCtx&&soundOn){playTone(523.25,'sine',0.12,0.3,0);playTone(659.25,'sine',0.1,0.3,0.15);}
+  }
+}
+
+function getTimeBonus(elapsed) {
+  const ratio=Math.max(0,1-(elapsed-60)/240);
+  return Math.round(ratio*300);
+}
+
 function onIslandComplete() {
   islandsCleared[currentIsland]=true;
+  const _elapsed=(performance.now()/1000)-islandStartTime;
+  const _bonus=getTimeBonus(_elapsed);
+  if(_bonus>0){
+    score+=_bonus; document.getElementById('score-val').textContent=score;
+    const {sx:_bsx,sy:_bsy}=ws(player.wx,player.wy-0.05);
+    particles.push({x:_bsx,y:_bsy-20,vx:0,vy:-1.8,life:1,decay:0.012,r:7,col:P.gold,text:`+${_bonus} TIME BONUS!`});
+  }
   saveProgress();
   playIslandUnlock();
   if(currentIsland>=ISLANDS.length-1){
@@ -1172,6 +1342,7 @@ function gameLoop(now) {
   updatePlayer(dt);
   updateClouds(dt);
   updateParticles(dt);
+  updateAmbientParticles(dt);
   renderScene(t);
 }
 
@@ -1280,6 +1451,7 @@ function setupInput(){
     if(e.key==='m'||e.key==='M'){const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();}
     if(e.key===' '||e.key==='Enter'){e.preventDefault();} // prevent button activation during gameplay
     if(e.key==='Escape'||e.key==='e'||e.key==='E'||e.key===' ')closeDialogue();
+    if(e.key==='f'||e.key==='F') tryBunnyInteract();
     if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
   });
   window.addEventListener('keyup',e=>{keys[e.key]=false;});
@@ -1289,7 +1461,7 @@ function setupInput(){
   jz.addEventListener('touchstart',e=>{e.preventDefault();const r=jz.getBoundingClientRect();jo={x:r.left+r.width/2,y:r.top+r.height/2};initAudio();audioCtx&&audioCtx.resume();},{passive:false});
   jz.addEventListener('touchmove',e=>{e.preventDefault();if(!jo)return;const t=e.touches[0];let dx=t.clientX-jo.x,dy=t.clientY-jo.y;const d=Math.hypot(dx,dy);if(d>MJ){dx=dx/d*MJ;dy=dy/d*MJ;}joyVec.x=dx/MJ;joyVec.y=dy/MJ;th.style.left=(57+dx)+'px';th.style.top=(57+dy)+'px';},{passive:false});
   jz.addEventListener('touchend',e=>{e.preventDefault();jo=null;joyVec.x=0;joyVec.y=0;th.style.left='34px';th.style.top='34px';},{passive:false});
-  document.getElementById('action-btn').addEventListener('touchstart',e=>{e.preventDefault();closeDialogue();},{passive:false});
+  document.getElementById('action-btn').addEventListener('touchstart',e=>{e.preventDefault();if(dialogueOpen)closeDialogue();else tryBunnyInteract();},{passive:false});
   document.getElementById('map-mobile-btn').addEventListener('touchstart',e=>{e.preventDefault();const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();},{passive:false});
 
   document.getElementById('map-canvas').addEventListener('click',e=>{
@@ -1317,8 +1489,9 @@ function loadIsland(idx){
   currentIsland=idx; crystalsCollected=0;
   for(let i=0;i<5;i++){const g=document.getElementById(`g${i}`);if(g){g.querySelector('polygon').setAttribute('fill',P.lilac);g.classList.remove('lit');}}
   player.wx=0.5;player.wy=0.78;player.facing=1;player.collectAnim=0;
-  particles=[];
-  buildScene(idx);spawnCrystals(idx);initClouds();initCritter();
+  particles=[]; ambientParticles=[];
+  buildScene(idx);spawnCrystals(idx);initClouds();initCritter();initAmbientParticles(idx);
+  islandStartTime=performance.now()/1000;
   const lbl=document.getElementById('island-label');
   lbl.textContent=ISLANDS[idx].name;lbl.style.opacity='1';
   setTimeout(()=>lbl.style.opacity='0',2500);
