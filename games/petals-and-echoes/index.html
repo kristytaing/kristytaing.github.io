@@ -19,7 +19,13 @@
   WASD / ARROWS move &nbsp;·&nbsp; E interact &nbsp;·&nbsp; C combine petals &nbsp;·&nbsp; TAB shadow world &nbsp;·&nbsp; SPACE place combination &nbsp;·&nbsp; R rest at stone (advance time)
 </div>
 <script>
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+const canvas=document.getElementById('game');
+const dpr=window.devicePixelRatio||1;
+const W=900,H=560;
+canvas.width=W*dpr;canvas.height=H*dpr;
+canvas.style.width=W+'px';canvas.style.height=H+'px';
+const ctx=canvas.getContext('2d');
+ctx.scale(dpr,dpr);
 
 // ═══════════════ STATE ═══════════════
 const G={
@@ -121,7 +127,7 @@ function mkWorldPetal(night=false){
   return{x:Math.random()*W,y:-20+Math.random()*H,
     vx:(Math.random()-0.5)*0.5,vy:0.35+Math.random()*0.55,
     rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*0.05,
-    sz:3.5+Math.random()*5,type:nk[Math.floor(Math.random()*(night?4:3))],
+    sz:3.5+Math.random()*5,type:nk[Math.floor(Math.random()*4)],
     op:0.45+Math.random()*0.5,collectible:Math.random()<0.28,age:Math.random()*80};
 }
 /* wind particles */
@@ -330,21 +336,87 @@ function drawMemFragments(){
 // ═══════════════ PLAYER RENDER ═══════════════
 function drawPlayer(){
   const{x,y}=PL;
-  const wk=PL.moving?Math.sin(G.t*8)*2:0;
-  ctx.globalAlpha=0.18;ctx.fillStyle='#a07080';
-  ctx.beginPath();ctx.ellipse(x+2,y+22,10,4,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  ctx.strokeStyle='#c47a8a';ctx.lineWidth=2.5;ctx.lineJoin='round';
-  ctx.beginPath();ctx.moveTo(x-9,y+6+wk);ctx.quadraticCurveTo(x-12,y+20,x-7,y+26);ctx.lineTo(x+7,y+26);ctx.quadraticCurveTo(x+12,y+20,x+9,y+6+wk);ctx.closePath();ctx.stroke();
-  ctx.beginPath();ctx.arc(x,y-4,9.5,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#f2a7b8';ctx.beginPath();ctx.moveTo(x-9,y+6+wk);ctx.quadraticCurveTo(x-12,y+20,x-7,y+26);ctx.lineTo(x+7,y+26);ctx.quadraticCurveTo(x+12,y+20,x+9,y+6+wk);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#fde8ee';ctx.beginPath();ctx.ellipse(x,y+6+wk,7,3,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#f5c9a0';ctx.beginPath();ctx.arc(x,y-4,9,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#7a4a2a';ctx.beginPath();ctx.arc(x,y-6,9,Math.PI,0);ctx.quadraticCurveTo(x+11,y-2,x+8,y+4);ctx.quadraticCurveTo(x-8,y+4,x-11,y-2);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#a06840';ctx.beginPath();ctx.ellipse(x-2,y-10,4,2.5,-0.4,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=0.35;ctx.fillStyle='#f0a0a0';
-  ctx.beginPath();ctx.ellipse(x-5,y-2,3,2,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+5,y-2,3,2,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  ctx.fillStyle='#5a3a2a';ctx.beginPath();ctx.arc(x-3,y-4,1.5,0,Math.PI*2);ctx.arc(x+3,y-4,1.5,0,Math.PI*2);ctx.fill();
+  const wk=PL.moving?Math.sin(G.t*8)*1.5:0;
+  const sw=G.shadowWorld;
+  const windSway=Math.sin(G.t*1.2)*2*(WIND_MOODS[G.windMood]?.spd||1);
+  // Shadow
+  ctx.globalAlpha=0.2;ctx.fillStyle='#806070';
+  ctx.beginPath();ctx.ellipse(x,y+20,9,3,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  // Dress/skirt
+  ctx.fillStyle=sw?'#9060c0':'#e87aaa';
+  ctx.beginPath();ctx.moveTo(x-10,y+8+wk*0.5);
+  ctx.quadraticCurveTo(x-14,y+22,x-8,y+26);
+  ctx.lineTo(x+8,y+26);ctx.quadraticCurveTo(x+14,y+22,x+10,y+8+wk*0.5);
+  ctx.closePath();ctx.fill();
+  // Hem highlight
+  ctx.globalAlpha=0.35;ctx.fillStyle='#fff0f5';
+  ctx.beginPath();ctx.moveTo(x-8,y+22);ctx.quadraticCurveTo(x,y+20,x+8,y+22);
+  ctx.quadraticCurveTo(x+6,y+26,x-6,y+26);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  // Bodice
+  ctx.fillStyle=sw?'#6030a0':'#c04878';
+  ctx.beginPath();ctx.ellipse(x,y+5+wk*0.3,6,7,0,0,Math.PI*2);ctx.fill();
+  // Collar
+  ctx.fillStyle='#fff5f8';ctx.beginPath();ctx.ellipse(x,y+wk*0.3,4,2,0,0,Math.PI*2);ctx.fill();
+  // Legs
+  ctx.fillStyle='#f5d5c0';
+  ctx.beginPath();ctx.ellipse(x-3,y+24,2,3,0.1,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3,y+24,2,3,-0.1,0,Math.PI*2);ctx.fill();
+  // Shoes
+  ctx.fillStyle='#7a4060';
+  ctx.beginPath();ctx.ellipse(x-3,y+27,3,2,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3,y+27,3,2,0,0,Math.PI*2);ctx.fill();
+  // Arms
+  ctx.strokeStyle=sw?'#c090e0':'#f5b8c8';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x-6,y+3+wk*0.3);ctx.quadraticCurveTo(x-12,y+10,x-10,y+16+wk);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+6,y+3+wk*0.3);ctx.quadraticCurveTo(x+12,y+10,x+10,y+16+wk);ctx.stroke();
+  // Back hair (behind head)
+  const hc=sw?'#5a2878':'#5c3018',hc2=sw?'#8040a0':'#8b5030';
+  ctx.fillStyle=hc;
+  // Right flowing strand
+  ctx.beginPath();ctx.moveTo(x+6,y-8);
+  ctx.quadraticCurveTo(x+13+windSway,y+2,x+11+windSway*1.5,y+16);
+  ctx.quadraticCurveTo(x+9+windSway*2,y+24,x+5+windSway*1.8,y+28);
+  ctx.quadraticCurveTo(x+3,y+29,x+7,y+18);
+  ctx.quadraticCurveTo(x+10,y+6,x+5,y-5);ctx.closePath();ctx.fill();
+  // Left strand
+  ctx.beginPath();ctx.moveTo(x-6,y-8);
+  ctx.quadraticCurveTo(x-12+windSway*0.5,y+2,x-10+windSway*0.8,y+14);
+  ctx.quadraticCurveTo(x-8+windSway,y+22,x-4+windSway*0.8,y+26);
+  ctx.quadraticCurveTo(x-6,y+28,x-9,y+14);
+  ctx.quadraticCurveTo(x-11,y+4,x-5,y-5);ctx.closePath();ctx.fill();
+  // Head/face
+  const fc=sw?'#d0a0c8':'#fde8d0';
+  ctx.fillStyle=fc;ctx.beginPath();ctx.arc(x,y-6,9,0,Math.PI*2);ctx.fill();
+  // Front hair fringe
+  ctx.fillStyle=hc;
+  ctx.beginPath();ctx.arc(x,y-13,7.5,Math.PI,0);
+  ctx.quadraticCurveTo(x+10,y-7,x+7,y-4);
+  ctx.quadraticCurveTo(x+2,y-2,x-2,y-2);
+  ctx.quadraticCurveTo(x-7,y-2,x-7,y-4);
+  ctx.quadraticCurveTo(x-10,y-7,x,y-13);ctx.closePath();ctx.fill();
+  // Hair highlight
+  ctx.strokeStyle=hc2;ctx.lineWidth=1.5;ctx.globalAlpha=0.5;
+  ctx.beginPath();ctx.moveTo(x+1,y-15);ctx.quadraticCurveTo(x+11+windSway,y+2,x+9+windSway*1.5,y+18);ctx.stroke();
+  ctx.globalAlpha=1;
+  // Hair bow
+  ctx.fillStyle=sw?'#f0d0ff':'#ff9ab8';
+  ctx.beginPath();ctx.ellipse(x+5,y-13,3,2,-0.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x+5,y-13,1,1,0,0,Math.PI*2);ctx.fill();
+  // Eyes (big chibi)
+  ctx.fillStyle=sw?'#c0a0ff':'#3a1a2a';
+  ctx.beginPath();ctx.ellipse(x-3,y-6,2.2,2.8,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3,y-6,2.2,2.8,0,0,Math.PI*2);ctx.fill();
+  // Eye shine
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.ellipse(x-3.8,y-7,0.9,0.9,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+2.2,y-7,0.9,0.9,0,0,Math.PI*2);ctx.fill();
+  // Blush
+  ctx.globalAlpha=0.38;ctx.fillStyle=sw?'#c080e0':'#ff9ab8';
+  ctx.beginPath();ctx.ellipse(x-5.5,y-4,2.5,1.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+5.5,y-4,2.5,1.5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  // Smile
+  ctx.strokeStyle=sw?'#9060a0':'#c06080';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(x,y-3.5,2,0.2,Math.PI-0.2);ctx.stroke();
 }
 
 // ═══════════════ FALLING PETALS ═══════════════
@@ -368,15 +440,35 @@ function updatePetals(){
   });
 }
 function drawPetals(){
+  const pulse=0.5+0.5*Math.sin(G.t*4);
   wPetals.forEach(p=>{
     if(p.collected)return;
     const pal=PT[p.type];
-    ctx.save();ctx.globalAlpha=p.op*(p.collectible?1.0:0.55);
+    ctx.save();
+    if(p.collectible&&!G.shadowWorld){
+      // Outer glow aura
+      ctx.globalAlpha=0.22+0.18*pulse;
+      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*3.5);
+      grd.addColorStop(0,pal.col);grd.addColorStop(1,'transparent');
+      ctx.fillStyle=grd;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.sz*3.5,0,Math.PI*2);ctx.fill();
+      // Sparkle ring: 4 tiny stars orbiting
+      ctx.globalAlpha=0.7+0.3*pulse;
+      for(let i=0;i<4;i++){
+        const ang=G.t*2+i*Math.PI/2;
+        const sx=p.x+Math.cos(ang)*p.sz*2.2;
+        const sy=p.y+Math.sin(ang)*p.sz*2.2;
+        ctx.fillStyle=pal.dark;
+        ctx.beginPath();ctx.arc(sx,sy,1.2,0,Math.PI*2);ctx.fill();
+      }
+    }
+    // Petal body
+    ctx.globalAlpha=p.op*(p.collectible?1.0:0.45);
     ctx.translate(p.x,p.y);ctx.rotate(p.rot);
     ctx.fillStyle=G.shadowWorld?'rgba(150,80,200,0.6)':pal.col;
     ctx.beginPath();ctx.ellipse(0,0,p.sz,p.sz*0.5,0,0,Math.PI*2);ctx.fill();
-    if(p.collectible&&!G.shadowWorld){
-      ctx.strokeStyle=pal.dark;ctx.lineWidth=0.8;ctx.stroke();
+    if(p.collectible){
+      ctx.strokeStyle=pal.dark;ctx.lineWidth=1.2*(0.7+0.3*pulse);ctx.stroke();
     }
     ctx.restore();
   });
@@ -776,7 +868,8 @@ function drawTutorial(){
     ctx.fillText('Cherry + Moss  →  Bloom Veil',W/2,py+150);
     ctx.fillText('Dew + Moon  →  Still Water',W/2,py+170);
     ctx.fillText('Cherry + Dew  →  Rose Mist',W/2,py+190);
-    ctx.fillText('(Explore to discover more combinations!)',W/2,py+214);
+    ctx.fillText('Moon 🌙 petals appear at night — use R at a wind stone to rest & advance time.',W/2,py+214);
+    ctx.fillText('(Explore to discover more combinations!)',W/2,py+234);
 
     ctx.fillStyle='#7a4060';ctx.font='italic 13px Georgia';
     ctx.fillText('Tip: Wind stones shift the mood — use Tab in dark areas',W/2,py+244);
