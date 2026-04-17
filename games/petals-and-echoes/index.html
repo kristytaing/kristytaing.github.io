@@ -336,118 +336,263 @@ function drawMemFragments(){
 // ═══════════════ PLAYER RENDER ═══════════════
 function drawPlayer(){
   const{x,y}=PL;
-  const wk=PL.moving?Math.sin(G.t*8)*1.5:0;
   const sw=G.shadowWorld;
-  const windSway=Math.sin(G.t*1.2)*2*(WIND_MOODS[G.windMood]?.spd||1);
-  // Shadow
-  ctx.globalAlpha=0.2;ctx.fillStyle='#806070';
-  ctx.beginPath();ctx.ellipse(x,y+20,9,3,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  // Dress/skirt
-  ctx.fillStyle=sw?'#9060c0':'#e87aaa';
-  ctx.beginPath();ctx.moveTo(x-10,y+8+wk*0.5);
-  ctx.quadraticCurveTo(x-14,y+22,x-8,y+26);
-  ctx.lineTo(x+8,y+26);ctx.quadraticCurveTo(x+14,y+22,x+10,y+8+wk*0.5);
-  ctx.closePath();ctx.fill();
-  // Hem highlight
-  ctx.globalAlpha=0.35;ctx.fillStyle='#fff0f5';
-  ctx.beginPath();ctx.moveTo(x-8,y+22);ctx.quadraticCurveTo(x,y+20,x+8,y+22);
-  ctx.quadraticCurveTo(x+6,y+26,x-6,y+26);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
-  // Bodice
-  ctx.fillStyle=sw?'#6030a0':'#c04878';
-  ctx.beginPath();ctx.ellipse(x,y+5+wk*0.3,6,7,0,0,Math.PI*2);ctx.fill();
-  // Collar
-  ctx.fillStyle='#fff5f8';ctx.beginPath();ctx.ellipse(x,y+wk*0.3,4,2,0,0,Math.PI*2);ctx.fill();
-  // Legs
-  ctx.fillStyle='#f5d5c0';
-  ctx.beginPath();ctx.ellipse(x-3,y+24,2,3,0.1,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+3,y+24,2,3,-0.1,0,Math.PI*2);ctx.fill();
-  // Shoes
-  ctx.fillStyle='#7a4060';
-  ctx.beginPath();ctx.ellipse(x-3,y+27,3,2,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+3,y+27,3,2,0,0,Math.PI*2);ctx.fill();
-  // Arms
-  ctx.strokeStyle=sw?'#c090e0':'#f5b8c8';ctx.lineWidth=3;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(x-6,y+3+wk*0.3);ctx.quadraticCurveTo(x-12,y+10,x-10,y+16+wk);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x+6,y+3+wk*0.3);ctx.quadraticCurveTo(x+12,y+10,x+10,y+16+wk);ctx.stroke();
-  // Back hair (behind head)
-  const hc=sw?'#5a2878':'#5c3018',hc2=sw?'#8040a0':'#8b5030';
-  ctx.fillStyle=hc;
-  // Right flowing strand
-  ctx.beginPath();ctx.moveTo(x+6,y-8);
-  ctx.quadraticCurveTo(x+13+windSway,y+2,x+11+windSway*1.5,y+16);
-  ctx.quadraticCurveTo(x+9+windSway*2,y+24,x+5+windSway*1.8,y+28);
-  ctx.quadraticCurveTo(x+3,y+29,x+7,y+18);
-  ctx.quadraticCurveTo(x+10,y+6,x+5,y-5);ctx.closePath();ctx.fill();
-  // Left strand
-  ctx.beginPath();ctx.moveTo(x-6,y-8);
-  ctx.quadraticCurveTo(x-12+windSway*0.5,y+2,x-10+windSway*0.8,y+14);
-  ctx.quadraticCurveTo(x-8+windSway,y+22,x-4+windSway*0.8,y+26);
-  ctx.quadraticCurveTo(x-6,y+28,x-9,y+14);
-  ctx.quadraticCurveTo(x-11,y+4,x-5,y-5);ctx.closePath();ctx.fill();
-  // Head/face
-  const fc=sw?'#d0a0c8':'#fde8d0';
-  ctx.fillStyle=fc;ctx.beginPath();ctx.arc(x,y-6,9,0,Math.PI*2);ctx.fill();
-  // Front hair fringe
-  ctx.fillStyle=hc;
-  ctx.beginPath();ctx.arc(x,y-13,7.5,Math.PI,0);
-  ctx.quadraticCurveTo(x+10,y-7,x+7,y-4);
-  ctx.quadraticCurveTo(x+2,y-2,x-2,y-2);
-  ctx.quadraticCurveTo(x-7,y-2,x-7,y-4);
-  ctx.quadraticCurveTo(x-10,y-7,x,y-13);ctx.closePath();ctx.fill();
-  // Hair highlight
-  ctx.strokeStyle=hc2;ctx.lineWidth=1.5;ctx.globalAlpha=0.5;
-  ctx.beginPath();ctx.moveTo(x+1,y-15);ctx.quadraticCurveTo(x+11+windSway,y+2,x+9+windSway*1.5,y+18);ctx.stroke();
-  ctx.globalAlpha=1;
-  // Hair bow
-  ctx.fillStyle=sw?'#f0d0ff':'#ff9ab8';
-  ctx.beginPath();ctx.ellipse(x+5,y-13,3,2,-0.5,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x+5,y-13,1,1,0,0,Math.PI*2);ctx.fill();
-  // Eyes (big chibi)
-  ctx.fillStyle=sw?'#c0a0ff':'#3a1a2a';
-  ctx.beginPath();ctx.ellipse(x-3,y-6,2.2,2.8,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+3,y-6,2.2,2.8,0,0,Math.PI*2);ctx.fill();
-  // Eye shine
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.ellipse(x-3.8,y-7,0.9,0.9,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+2.2,y-7,0.9,0.9,0,0,Math.PI*2);ctx.fill();
-  // Blush
-  ctx.globalAlpha=0.38;ctx.fillStyle=sw?'#c080e0':'#ff9ab8';
-  ctx.beginPath();ctx.ellipse(x-5.5,y-4,2.5,1.5,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+5.5,y-4,2.5,1.5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  // Smile
-  ctx.strokeStyle=sw?'#9060a0':'#c06080';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(x,y-3.5,2,0.2,Math.PI-0.2);ctx.stroke();
+  const wk=PL.moving?Math.sin(G.t*7)*1.8:0;
+  const bounce=PL.moving?Math.abs(Math.sin(G.t*7))*1.5:0;
+  const windSway=Math.sin(G.t*1.1)*(WIND_MOODS[G.windMood]?.spd||1)*2.2;
+  const ry=y-bounce*0.4; // slight bob up when walking
 
-  // === BASKET in left hand ===
-  const bx2=x-10+Math.cos(G.t*8)*wk*0.4;
-  const by2=y+16+Math.abs(wk)*0.5;
+  // ── Ground shadow ──
+  ctx.save();
+  ctx.globalAlpha=0.18;
+  const sg=ctx.createRadialGradient(x,ry+28,0,x,ry+28,14);
+  sg.addColorStop(0,'rgba(80,40,60,0.7)');sg.addColorStop(1,'transparent');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(x,ry+28,14,5,0,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ── Helper: gradient fill ──
+  function gFill(grd){ctx.fillStyle=grd;ctx.fill();}
+
+  // ── BACK HAIR (draw before body so it sits behind) ──
+  const hBase=sw?'#3a1060':'#4a2810';
+  const hMid =sw?'#6030a0':'#7a4828';
+  const hShine=sw?'#9060c8':'#b87848';
+  ctx.save();
+  // Long right strand flowing in wind
+  ctx.beginPath();
+  ctx.moveTo(x+7,ry-12);
+  ctx.bezierCurveTo(x+16+windSway,ry-2, x+14+windSway*1.8,ry+14, x+10+windSway*2.2,ry+28);
+  ctx.bezierCurveTo(x+8+windSway*2,ry+34, x+4,ry+34, x+5,ry+26);
+  ctx.bezierCurveTo(x+8,ry+16, x+11,ry+2, x+5,ry-10);
+  ctx.closePath();
+  let hg=ctx.createLinearGradient(x+4,ry-12,x+14+windSway,ry+28);
+  hg.addColorStop(0,hMid);hg.addColorStop(0.5,hBase);hg.addColorStop(1,hBase);
+  gFill(hg);
+  // Long left strand
+  ctx.beginPath();
+  ctx.moveTo(x-7,ry-12);
+  ctx.bezierCurveTo(x-15+windSway*0.6,ry-2, x-13+windSway*0.9,ry+12, x-9+windSway*1.1,ry+26);
+  ctx.bezierCurveTo(x-7+windSway,ry+32, x-3,ry+32, x-4,ry+24);
+  ctx.bezierCurveTo(x-8,ry+14, x-10,ry+2, x-4,ry-10);
+  ctx.closePath();
+  hg=ctx.createLinearGradient(x-14,ry-12,x-6,ry+28);
+  hg.addColorStop(0,hMid);hg.addColorStop(0.5,hBase);hg.addColorStop(1,hBase);
+  gFill(hg);
+  ctx.restore();
+
+  // ── DRESS (puffy A-line skirt with gradient shading) ──
+  ctx.save();
+  const dTop=sw?'#7040b0':'#e8609a';
+  const dBot=sw?'#4820808':'#c04080';
+  const dHem=sw?'#9060c8':'#f090c0';
+  // Skirt
+  ctx.beginPath();
+  ctx.moveTo(x-7,ry+6+wk*0.4);
+  ctx.bezierCurveTo(x-16,ry+16, x-13,ry+28, x-9,ry+32);
+  ctx.lineTo(x+9,ry+32);
+  ctx.bezierCurveTo(x+13,ry+28, x+16,ry+16, x+7,ry+6+wk*0.4);
+  ctx.closePath();
+  let dg=ctx.createLinearGradient(x-13,ry+6,x+13,ry+32);
+  dg.addColorStop(0,dTop);dg.addColorStop(0.6,dBot);dg.addColorStop(1,dBot);
+  gFill(dg);
+  // Hem glow strip
+  ctx.globalAlpha=0.45;
+  ctx.beginPath();
+  ctx.moveTo(x-9,ry+28);ctx.bezierCurveTo(x-6,ry+26,x+6,ry+26,x+9,ry+28);
+  ctx.bezierCurveTo(x+8,ry+33,x-8,ry+33,x-9,ry+28);ctx.closePath();
+  ctx.fillStyle=dHem;ctx.fill();
+  ctx.globalAlpha=1;
+  // Bodice
+  ctx.beginPath();ctx.ellipse(x,ry+3+wk*0.2,6.5,8,0,0,Math.PI*2);
+  dg=ctx.createRadialGradient(x-2,ry,2,x,ry+3,9);
+  dg.addColorStop(0,sw?'#9060c8':'#f080b0');dg.addColorStop(1,dTop);
+  gFill(dg);
+  // Collar / neck ruffle
+  ctx.beginPath();ctx.ellipse(x,ry-1+wk*0.2,5,2.5,0,0,Math.PI*2);
+  ctx.fillStyle=sw?'#d0b0f0':'#fff0f8';ctx.fill();
+  ctx.restore();
+
+  // ── LEGS ──
+  ctx.save();
+  const skinCol=sw?'#c0a0d0':'#fcd8b8';
+  const skinShad=sw?'#a070b0':'#e8b898';
+  // Left leg
+  ctx.beginPath();ctx.ellipse(x-3.5,ry+28+wk*0.6,2.8,4,0.1,0,Math.PI*2);
+  let lg=ctx.createRadialGradient(x-4.5,ry+26,0,x-3.5,ry+28,5);
+  lg.addColorStop(0,skinCol);lg.addColorStop(1,skinShad);gFill(lg);
+  // Right leg
+  ctx.beginPath();ctx.ellipse(x+3.5,ry+28-wk*0.6,2.8,4,-0.1,0,Math.PI*2);
+  lg=ctx.createRadialGradient(x+4.5,ry+26,0,x+3.5,ry+28,5);
+  lg.addColorStop(0,skinCol);lg.addColorStop(1,skinShad);gFill(lg);
+  // Shoes (round Mary-Jane style)
+  ctx.beginPath();ctx.ellipse(x-3.5,ry+32+wk*0.5,4,2.5,0.1,0,Math.PI*2);
+  ctx.fillStyle=sw?'#604080':'#8b3060';ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3.5,ry+32-wk*0.5,4,2.5,-0.1,0,Math.PI*2);
+  ctx.fillStyle=sw?'#604080':'#8b3060';ctx.fill();
+  // Shoe shine
+  ctx.globalAlpha=0.35;ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.ellipse(x-4,ry+31+wk*0.5,1.5,1,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3,ry+31-wk*0.5,1.5,1,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;ctx.restore();
+
+  // ── ARMS ──
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  const armCol=sw?'#b090d0':'#fcd8b8';
+  // Right arm (holds basket side — right)
+  ctx.strokeStyle=armCol;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(x+6,ry+2+wk*0.2);
+  ctx.quadraticCurveTo(x+13,ry+10,x+11,ry+18-wk);ctx.stroke();
+  ctx.strokeStyle=sw?'#9070b0':'#e8b898';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x+6,ry+2+wk*0.2);
+  ctx.quadraticCurveTo(x+13,ry+10,x+11,ry+18-wk);ctx.stroke();
+  // Left arm (basket arm)
+  ctx.strokeStyle=armCol;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(x-6,ry+2+wk*0.2);
+  ctx.quadraticCurveTo(x-13,ry+10,x-11,ry+18+wk);ctx.stroke();
+  ctx.strokeStyle=sw?'#9070b0':'#e8b898';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x-6,ry+2+wk*0.2);
+  ctx.quadraticCurveTo(x-13,ry+10,x-11,ry+18+wk);ctx.stroke();
+  ctx.restore();
+
+  // ── HEAD ──
+  ctx.save();
+  const faceLight=sw?'#e0c0e8':'#feebd8';
+  const faceMid  =sw?'#c8a0d0':'#fcd8b8';
+  const faceShad =sw?'#a878b8':'#e8b898';
+  // Head base with gradient
+  ctx.beginPath();ctx.arc(x,ry-8,11,0,Math.PI*2);
+  let fg=ctx.createRadialGradient(x-3,ry-11,1,x,ry-8,12);
+  fg.addColorStop(0,faceLight);fg.addColorStop(0.6,faceMid);fg.addColorStop(1,faceShad);
+  gFill(fg);
+  ctx.restore();
+
+  // ── FRONT HAIR (fringe over face) ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x,ry-17,9,Math.PI,0);
+  ctx.bezierCurveTo(x+12,ry-10, x+8,ry-4, x+5,ry-5);
+  ctx.bezierCurveTo(x+1,ry-3, x-1,ry-3, x-5,ry-5);
+  ctx.bezierCurveTo(x-8,ry-4, x-12,ry-10, x,ry-17);
+  ctx.closePath();
+  hg=ctx.createLinearGradient(x-9,ry-18,x+9,ry-4);
+  hg.addColorStop(0,hMid);hg.addColorStop(1,hBase);
+  gFill(hg);
+  // Hair top volume
+  ctx.beginPath();ctx.ellipse(x,ry-18,8,5,0,0,Math.PI*2);
+  hg=ctx.createRadialGradient(x-2,ry-20,1,x,ry-18,8);
+  hg.addColorStop(0,hShine);hg.addColorStop(0.5,hMid);hg.addColorStop(1,hBase);
+  gFill(hg);
+  ctx.restore();
+
+  // ── HAIR BOW ──
+  ctx.save();
+  const bowCol=sw?'#e0b0ff':'#ff8ab0';
+  const bowX=x+7, bowY=ry-18;
+  // Left loop
+  ctx.beginPath();ctx.ellipse(bowX-4,bowY,4,2.5,-0.4,0,Math.PI*2);
+  ctx.fillStyle=bowCol;ctx.fill();
+  // Right loop
+  ctx.beginPath();ctx.ellipse(bowX+4,bowY,4,2.5,0.4,0,Math.PI*2);
+  ctx.fillStyle=bowCol;ctx.fill();
+  // Centre knot
+  ctx.beginPath();ctx.ellipse(bowX,bowY,2,2,0,0,Math.PI*2);
+  ctx.fillStyle=sw?'#f0d0ff':'#ffb0cc';ctx.fill();
+  // Bow highlight
+  ctx.globalAlpha=0.5;ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.ellipse(bowX-4,bowY-0.8,2,1,−0.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(bowX+4,bowY-0.8,2,1,0.3,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;ctx.restore();
+
+  // ── EYES ──
+  ctx.save();
+  // Eye whites (subtle)
+  ctx.fillStyle='#fff8f0';
+  ctx.beginPath();ctx.ellipse(x-3.5,ry-8,3,3.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3.5,ry-8,3,3.5,0,0,Math.PI*2);ctx.fill();
+  // Iris gradient
+  const eyeCol=sw?'#8040d0':'#4a2878';
+  let eg=ctx.createRadialGradient(x-3.5,ry-9,0,x-3.5,ry-8,3);
+  eg.addColorStop(0,sw?'#c0a0f8':'#8060d0');eg.addColorStop(1,eyeCol);
+  ctx.fillStyle=eg;ctx.beginPath();ctx.ellipse(x-3.5,ry-8,2.5,3,0,0,Math.PI*2);ctx.fill();
+  eg=ctx.createRadialGradient(x+3.5,ry-9,0,x+3.5,ry-8,3);
+  eg.addColorStop(0,sw?'#c0a0f8':'#8060d0');eg.addColorStop(1,eyeCol);
+  ctx.fillStyle=eg;ctx.beginPath();ctx.ellipse(x+3.5,ry-8,2.5,3,0,0,Math.PI*2);ctx.fill();
+  // Pupil
+  ctx.fillStyle=sw?'#200840':'#1a0830';
+  ctx.beginPath();ctx.ellipse(x-3.5,ry-8,1.4,1.8,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+3.5,ry-8,1.4,1.8,0,0,Math.PI*2);ctx.fill();
+  // Eye shine — large + small dot
+  ctx.fillStyle='#ffffff';
+  ctx.beginPath();ctx.ellipse(x-4.4,ry-9.5,1.1,1.1,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x-2.8,ry-7.5,0.5,0.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+2.6,ry-9.5,1.1,1.1,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+4.2,ry-7.5,0.5,0.5,0,0,Math.PI*2);ctx.fill();
+  // Eyelash top
+  ctx.strokeStyle=sw?'#5020a0':'#2a1040';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.arc(x-3.5,ry-8,2.5,Math.PI+0.3,Math.PI*2-0.3);ctx.stroke();
+  ctx.beginPath();ctx.arc(x+3.5,ry-8,2.5,Math.PI+0.3,Math.PI*2-0.3);ctx.stroke();
+  ctx.restore();
+
+  // ── BLUSH ──
+  ctx.save();ctx.globalAlpha=0.32;
+  const blushCol=sw?'#d090e8':'#ffaacc';
+  ctx.fillStyle=blushCol;
+  ctx.beginPath();ctx.ellipse(x-6.5,ry-5,3.5,2,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+6.5,ry-5,3.5,2,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;ctx.restore();
+
+  // ── NOSE & MOUTH ──
+  ctx.save();
+  ctx.fillStyle=sw?'#b080c0':'#e8a090';
+  ctx.beginPath();ctx.ellipse(x,ry-4.5,1,0.7,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=sw?'#9060a8':'#d06888';ctx.lineWidth=1.1;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(x,ry-2,2.2,0.15,Math.PI-0.15);ctx.stroke();
+  ctx.restore();
+
+  // ── BASKET (left hand, swings with walk) ──
+  ctx.save();
+  const bx2=x-11+wk*0.5;
+  const by2=ry+19+Math.abs(wk)*0.3;
   const full=PL.inv.length>=(PL.maxInv||8);
-  // Basket body
-  ctx.fillStyle=sw?'#7050a0':full?'#c87840':'#b8683a';
-  ctx.beginPath();ctx.ellipse(bx2,by2,5,4,0.15,0,Math.PI*2);ctx.fill();
-  // Basket weave lines
-  ctx.strokeStyle=sw?'#5030708':'#8a4820';ctx.lineWidth=0.8;
-  ctx.beginPath();ctx.moveTo(bx2-4,by2-1);ctx.lineTo(bx2+4,by2-1);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(bx2-4,by2+1);ctx.lineTo(bx2+4,by2+1);ctx.stroke();
-  // Basket handle
-  ctx.strokeStyle=sw?'#6040908':'#9a5828';ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.arc(bx2,by2-2,4,Math.PI,0);ctx.stroke();
-  // If full: petals overflowing
-  if(full){
-    ctx.fillStyle='#f79ab8';ctx.globalAlpha=0.9;
-    ctx.beginPath();ctx.ellipse(bx2-2,by2-4,3,2,0.3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#b8d890';
-    ctx.beginPath();ctx.ellipse(bx2+2,by2-4,2.5,1.8,-0.3,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;
-  } else if(PL.inv.length>0){
-    // Show top petal colour
-    const topCol=PT[PL.inv[PL.inv.length-1]].col;
-    ctx.fillStyle=topCol;ctx.globalAlpha=0.8;
-    ctx.beginPath();ctx.ellipse(bx2,by2-3,2.5,1.5,0,0,Math.PI*2);ctx.fill();
+  // Basket shadow
+  ctx.globalAlpha=0.15;ctx.fillStyle='#402030';
+  ctx.beginPath();ctx.ellipse(bx2,by2+5,5,2,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  // Basket body gradient
+  let bg=ctx.createLinearGradient(bx2-6,by2-5,bx2+6,by2+5);
+  bg.addColorStop(0,sw?'#8060b0':full?'#e09050':'#c87840');
+  bg.addColorStop(1,sw?'#503880':full?'#a86030':'#8a5020');
+  ctx.beginPath();
+  ctx.moveTo(bx2-6,by2-3);ctx.lineTo(bx2+6,by2-3);
+  ctx.bezierCurveTo(bx2+7,by2+1,bx2+5,by2+5,bx2+3,by2+6);
+  ctx.lineTo(bx2-3,by2+6);
+  ctx.bezierCurveTo(bx2-5,by2+5,bx2-7,by2+1,bx2-6,by2-3);
+  ctx.closePath();ctx.fillStyle=bg;ctx.fill();
+  // Weave texture
+  ctx.strokeStyle=sw?'#3820608':'#6a3810';ctx.lineWidth=0.7;
+  for(let wl=-1;wl<=1;wl++){
+    ctx.beginPath();ctx.moveTo(bx2-5,by2+wl*2);ctx.lineTo(bx2+5,by2+wl*2);ctx.stroke();
+  }
+  ctx.beginPath();ctx.moveTo(bx2,by2-3);ctx.lineTo(bx2,by2+6);ctx.stroke();
+  // Rim
+  ctx.fillStyle=sw?'#9070c0':full?'#f0a060':'#d89050';
+  ctx.beginPath();ctx.ellipse(bx2,by2-3,6.5,2,0,0,Math.PI*2);ctx.fill();
+  // Handle arc
+  ctx.strokeStyle=sw?'#7050a0':'#b87030';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(bx2,by2-3,5,Math.PI,0);ctx.stroke();
+  // Contents (top petal visible)
+  if(PL.inv.length>0){
+    const topT=PL.inv[PL.inv.length-1];
+    ctx.globalAlpha=0.9;
+    ctx.fillStyle=full?'#f79ab8':PT[topT].col;
+    ctx.beginPath();ctx.ellipse(bx2,by2-4,3.5,2,0,0,Math.PI*2);ctx.fill();
+    if(full){
+      ctx.fillStyle='#b0e890';
+      ctx.beginPath();ctx.ellipse(bx2+2,by2-5,2.5,1.5,0.3,0,Math.PI*2);ctx.fill();
+    }
     ctx.globalAlpha=1;
   }
+  ctx.restore();
 }
-
 // ═══════════════ FALLING PETALS ═══════════════
 function updatePetals(){
   const sw=G.shadowWorld;
