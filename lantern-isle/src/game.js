@@ -202,7 +202,7 @@ function advanceDialogue() {
   currentLine = '';
   dialogueText.textContent = '';
   dialogueContinue.style.display = 'none';
-  if (typewriterTimer) clearInterval(typewriterTimer);
+  if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
   let ci = 0;
   sfxDialogue();
   typewriterTimer = setInterval(() => {
@@ -212,6 +212,7 @@ function advanceDialogue() {
       if (ci % 8 === 0) sfxDialogue();
     } else {
       clearInterval(typewriterTimer);
+      typewriterTimer = null;
       dialogueContinue.style.display = 'block';
     }
   }, 28);
@@ -219,7 +220,7 @@ function advanceDialogue() {
 
 function closeDialogue() {
   dialogueBox.style.display = 'none';
-  if (typewriterTimer) clearInterval(typewriterTimer);
+  if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; }
   state = 'playing';
   if (dialogueCallback) { const cb = dialogueCallback; dialogueCallback = null; cb(); }
 }
@@ -414,7 +415,7 @@ window.addEventListener('keydown', e => {
   if (state === 'title') return;
   if (state === 'dialogue') {
     if (!wasDown && (k === 'e' || k === ' ' || k === 'enter')) {
-      if (typewriterTimer) { clearInterval(typewriterTimer); dialogueText.textContent = currentLine; dialogueContinue.style.display='block'; return; }
+      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; dialogueText.textContent = currentLine; dialogueContinue.style.display='block'; return; }
       advanceDialogue();
     }
     return;
@@ -587,7 +588,7 @@ document.getElementById('sound-toggle').addEventListener('click', ()=>{
   document.getElementById('sound-toggle').textContent = m ? '🔇' : '🔊';
 });
 document.getElementById('dialogue-box').addEventListener('click', (e)=>{ e.stopPropagation();
-  if (typewriterTimer) { clearInterval(typewriterTimer); dialogueText.textContent=currentLine; dialogueContinue.style.display='block'; return; }
+  if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; dialogueText.textContent=currentLine; dialogueContinue.style.display='block'; return; }
   advanceDialogue();
 });
 document.getElementById('restart-btn').addEventListener('click', ()=>{
