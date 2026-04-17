@@ -417,6 +417,35 @@ function drawPlayer(){
   // Smile
   ctx.strokeStyle=sw?'#9060a0':'#c06080';ctx.lineWidth=1;
   ctx.beginPath();ctx.arc(x,y-3.5,2,0.2,Math.PI-0.2);ctx.stroke();
+
+  // === BASKET in left hand ===
+  const bx2=x-10+Math.cos(G.t*8)*wk*0.4;
+  const by2=y+16+Math.abs(wk)*0.5;
+  const full=PL.inv.length>=(PL.maxInv||8);
+  // Basket body
+  ctx.fillStyle=sw?'#7050a0':full?'#c87840':'#b8683a';
+  ctx.beginPath();ctx.ellipse(bx2,by2,5,4,0.15,0,Math.PI*2);ctx.fill();
+  // Basket weave lines
+  ctx.strokeStyle=sw?'#5030708':'#8a4820';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(bx2-4,by2-1);ctx.lineTo(bx2+4,by2-1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(bx2-4,by2+1);ctx.lineTo(bx2+4,by2+1);ctx.stroke();
+  // Basket handle
+  ctx.strokeStyle=sw?'#6040908':'#9a5828';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.arc(bx2,by2-2,4,Math.PI,0);ctx.stroke();
+  // If full: petals overflowing
+  if(full){
+    ctx.fillStyle='#f79ab8';ctx.globalAlpha=0.9;
+    ctx.beginPath();ctx.ellipse(bx2-2,by2-4,3,2,0.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#b8d890';
+    ctx.beginPath();ctx.ellipse(bx2+2,by2-4,2.5,1.8,-0.3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  } else if(PL.inv.length>0){
+    // Show top petal colour
+    const topCol=PT[PL.inv[PL.inv.length-1]].col;
+    ctx.fillStyle=topCol;ctx.globalAlpha=0.8;
+    ctx.beginPath();ctx.ellipse(bx2,by2-3,2.5,1.5,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  }
 }
 
 // ═══════════════ FALLING PETALS ═══════════════
@@ -439,38 +468,60 @@ function updatePetals(){
     }
   });
 }
+function drawPetal(cx,cy,rot,sz,col,dark,alpha){
+  // Realistic 5-petal flower shape
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,cy);ctx.rotate(rot);
+  for(let i=0;i<5;i++){
+    ctx.save();ctx.rotate(i*Math.PI*2/5);
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-sz*0.4,-sz*0.5,-sz*0.4,-sz*1.1,0,-sz*1.3);
+    ctx.bezierCurveTo(sz*0.4,-sz*1.1,sz*0.4,-sz*0.5,0,0);
+    ctx.fill();
+    // Inner vein
+    ctx.strokeStyle=dark;ctx.lineWidth=0.5;ctx.globalAlpha=alpha*0.5;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-sz*1.1);ctx.stroke();
+    ctx.globalAlpha=alpha;
+    ctx.restore();
+  }
+  // Centre
+  ctx.fillStyle='#fff8e0';ctx.beginPath();ctx.arc(0,0,sz*0.28,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
 function drawPetals(){
-  const pulse=0.5+0.5*Math.sin(G.t*4);
+  const pulse=0.5+0.5*Math.sin(G.t*3.5);
   wPetals.forEach(p=>{
     if(p.collected)return;
     const pal=PT[p.type];
-    ctx.save();
+    const col=G.shadowWorld?'#b070e0':pal.col;
+    const dark=G.shadowWorld?'#6030a0':pal.dark;
     if(p.collectible&&!G.shadowWorld){
-      // Outer glow aura
-      ctx.globalAlpha=0.22+0.18*pulse;
-      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*3.5);
-      grd.addColorStop(0,pal.col);grd.addColorStop(1,'transparent');
+      // Warm radial bloom glow
+      ctx.save();
+      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*5);
+      grd.addColorStop(0,pal.col+'cc');
+      grd.addColorStop(0.4,pal.col+'55');
+      grd.addColorStop(1,'transparent');
+      ctx.globalAlpha=0.55+0.25*pulse;
       ctx.fillStyle=grd;
-      ctx.beginPath();ctx.arc(p.x,p.y,p.sz*3.5,0,Math.PI*2);ctx.fill();
-      // Sparkle ring: 4 tiny stars orbiting
-      ctx.globalAlpha=0.7+0.3*pulse;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.sz*5,0,Math.PI*2);ctx.fill();
+      // Sparkle orbit
       for(let i=0;i<4;i++){
-        const ang=G.t*2+i*Math.PI/2;
-        const sx=p.x+Math.cos(ang)*p.sz*2.2;
-        const sy=p.y+Math.sin(ang)*p.sz*2.2;
-        ctx.fillStyle=pal.dark;
-        ctx.beginPath();ctx.arc(sx,sy,1.2,0,Math.PI*2);ctx.fill();
+        const ang=G.t*2.2+i*Math.PI/2;
+        const sx=p.x+Math.cos(ang)*p.sz*3;
+        const sy=p.y+Math.sin(ang)*p.sz*3;
+        ctx.globalAlpha=(0.6+0.4*pulse)*p.op;
+        ctx.fillStyle='#fff';
+        ctx.beginPath();ctx.arc(sx,sy,1.1,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=pal.col;
+        ctx.beginPath();ctx.arc(sx,sy,0.6,0,Math.PI*2);ctx.fill();
       }
+      ctx.restore();
     }
-    // Petal body
-    ctx.globalAlpha=p.op*(p.collectible?1.0:0.45);
-    ctx.translate(p.x,p.y);ctx.rotate(p.rot);
-    ctx.fillStyle=G.shadowWorld?'rgba(150,80,200,0.6)':pal.col;
-    ctx.beginPath();ctx.ellipse(0,0,p.sz,p.sz*0.5,0,0,Math.PI*2);ctx.fill();
-    if(p.collectible){
-      ctx.strokeStyle=pal.dark;ctx.lineWidth=1.2*(0.7+0.3*pulse);ctx.stroke();
-    }
-    ctx.restore();
+    // Petal body — realistic flower
+    drawPetal(p.x,p.y,p.rot,p.sz*(p.collectible?1.0:0.75),col,dark,
+      p.op*(p.collectible?1.0:0.38));
   });
 }
 
@@ -626,33 +677,47 @@ function checkWin(){
 function drawHUD(){
   ctx.save();ctx.globalAlpha=0.93;
 
-  // ── Portrait (bottom-left) ──
-  const px=46,py=H-60,pr=30;
-  const pg=ctx.createRadialGradient(px,py,pr*0.6,px,py,pr+6);
-  pg.addColorStop(0,'rgba(255,200,210,0.4)');pg.addColorStop(1,'rgba(255,200,210,0)');
-  ctx.fillStyle=pg;ctx.beginPath();ctx.arc(px,py,pr+6,0,Math.PI*2);ctx.fill();
-  ctx.save();ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.clip();
-  ctx.fillStyle='#fde8f0';ctx.fillRect(px-pr,py-pr,pr*2,pr*2);
-  ctx.translate(px-PL.x*0.42+2,py-PL.y*0.42+4);ctx.scale(0.74,0.74);drawPlayer();ctx.restore();
-  ctx.strokeStyle='#d4899a';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.stroke();
+  // Portrait removed
 
-  // ── Inventory bar ──
-  const iw=180,ih=38,ix=14,iy=H-34;
-  ctx.shadowColor='rgba(180,120,140,0.2)';ctx.shadowBlur=8;
-  Theme.roundRect(ix,iy-ih,iw,ih,14);ctx.fillStyle='rgba(255,240,245,0.92)';ctx.fill();
-  ctx.strokeStyle='rgba(212,160,175,0.6)';ctx.lineWidth=1.5;ctx.stroke();ctx.shadowBlur=0;
-  ctx.fillStyle='#c4a0b0';ctx.font='9px Georgia';ctx.textAlign='left';ctx.fillText('petals',ix+7,iy-ih+12);
+  // ── Inventory bar with capacity ──
+  const maxSlots=PL.maxInv||8;
+  const filled=PL.inv.length;
+  const isFull=filled>=maxSlots;
+  const iw=14+maxSlots*22+10,ih=44,ix=14,iy=H-14;
+  // Full-basket glow when at capacity
+  if(isFull){ctx.shadowColor='rgba(255,140,180,0.7)';ctx.shadowBlur=18;}
+  else{ctx.shadowColor='rgba(180,120,140,0.15)';ctx.shadowBlur=6;}
+  Theme.roundRect(ix,iy-ih,iw,ih,14);
+  // Fill bar tint behind slots
+  if(filled>0){
+    const fillW=(filled/maxSlots)*(iw-4);
+    const fillG=ctx.createLinearGradient(ix+2,0,ix+2+fillW,0);
+    fillG.addColorStop(0,isFull?'rgba(255,160,190,0.35)':'rgba(220,190,210,0.18)');
+    fillG.addColorStop(1,isFull?'rgba(255,200,220,0.22)':'rgba(220,190,210,0.08)');
+    ctx.fillStyle=fillG;Theme.roundRect(ix+2,iy-ih+2,fillW,ih-4,12);ctx.fill();
+  }
+  ctx.fillStyle='rgba(255,240,248,0.93)';Theme.roundRect(ix,iy-ih,iw,ih,14);ctx.fill();
+  ctx.strokeStyle=isFull?'rgba(255,120,160,0.7)':'rgba(212,160,175,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.shadowBlur=0;
+  // Label
+  ctx.fillStyle=isFull?'#d04070':'#c4a0b0';ctx.font='bold 8px Georgia';ctx.textAlign='left';
+  ctx.fillText(isFull?'🧺 FULL':'🧺 petals',ix+8,iy-ih+12);
+  ctx.fillStyle='#b090a0';ctx.font='8px Georgia';ctx.textAlign='right';
+  ctx.fillText(filled+'/'+maxSlots,ix+iw-8,iy-ih+12);
   // Slots
-  PL.inv.slice(0,8).forEach((t,i)=>{
-    const sx=ix+10+i*21,sy=iy-ih/2-2;
-    ctx.fillStyle=PT[t].col;ctx.strokeStyle=PT[t].dark;ctx.lineWidth=1.2;
+  for(let i=0;i<maxSlots;i++){
+    const sx=ix+8+i*22+11,sy=iy-ih/2+4;
+    const t=PL.inv[i];
+    // Empty slot
+    ctx.fillStyle=t?PT[t].col:'rgba(200,180,190,0.2)';
+    ctx.strokeStyle=t?PT[t].dark:'rgba(200,160,175,0.25)';ctx.lineWidth=t?1.2:0.8;
     ctx.beginPath();ctx.ellipse(sx,sy,9,6,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#fff';ctx.font='8px serif';ctx.textAlign='center';ctx.fillText(PT[t].label,sx,sy+3);
-  });
+    if(t){ctx.fillStyle='#fff';ctx.font='8px serif';ctx.textAlign='center';ctx.fillText(PT[t].label,sx,sy+3);}
+  }
   // Combinations
   PL.combinations.slice(0,3).forEach((r,i)=>{
     const rec=RECIPES.find(rc=>rc.r===r);if(!rec)return;
-    const sx=ix+10+i*22+168,sy=iy-ih/2-2;
+    const sx=ix+iw+14+i*24,sy=iy-ih/2+4;
     ctx.fillStyle=rec.col;ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;
     ctx.beginPath();ctx.arc(sx,sy,10,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.font='10px serif';ctx.textAlign='center';ctx.fillText(rec.icon,sx,sy+3.5);
@@ -776,6 +841,31 @@ function drawMemoryScene(){
   ctx.fillStyle='rgba(140,100,120,0.8)';ctx.font='10px Georgia';
   ctx.fillText('The world remembers a little more...',W/2,H/2+24);
   ctx.globalAlpha=1;
+}
+
+// ═══════════════ CONTEXT TOAST ═══════════════
+function drawToast(){
+  // Build contextual hint string
+  let hint='';
+  if(G.nearStone&&!G.nearStone.learned) hint='[E] Learn wind stone · [R] Rest to advance time';
+  else if(G.nearMarker&&!G.nearMarker.solved) hint='[E] Use spell to restore this zone';
+  else if(G.nearFragment&&!G.nearFragment.collected) hint='[E] Collect memory fragment';
+  else if(PL.inv.length>=2) hint='[C] Open cauldron · combine petals into a spell';
+  else if(PL.inv.length>0) hint='Collect more petals · [Tab] enter shadow world';
+  else hint='Walk into glowing petals to collect them';
+  // Draw toast at bottom-center
+  const tw=Math.min(500,hint.length*7+40),th=32;
+  const tx=W/2-tw/2,ty=H-52;
+  ctx.save();
+  ctx.globalAlpha=0.88;
+  ctx.shadowColor='rgba(80,40,60,0.4)';ctx.shadowBlur=12;
+  Theme.roundRect(tx,ty,tw,th,12);
+  ctx.fillStyle='rgba(30,18,28,0.82)';ctx.fill();
+  ctx.strokeStyle='rgba(200,140,170,0.5)';ctx.lineWidth=1;ctx.stroke();
+  ctx.shadowBlur=0;ctx.globalAlpha=1;
+  ctx.fillStyle='#f5d8e8';ctx.font='11px Georgia';ctx.textAlign='center';
+  ctx.fillText(hint,W/2,ty+20);
+  ctx.restore();
 }
 
 // ═══════════════ NOTICE / POPS ═══════════════
@@ -948,7 +1038,7 @@ function loop(ts){
   if(!G.showTutorial) movePlayer();
   drawPops();
   drawHUD();
-  drawNotice();
+  drawNotice(); drawToast();
   drawCombineUI();
   drawMemoryScene();
   if(G.won)drawWin();
