@@ -161,13 +161,17 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 </div>
 
 <div class="screen hidden" id="win-screen">
-  <div class="win-panel">
-    <div style="font-size:44px;margin-bottom:12px">🏆✨🌟</div>
-    <h1>Adventure Complete!</h1>
-    <div class="sub">All 6 Islands Explored • 30 Crystals Collected!</div>
-    <p>You've brought light to every corner of the Whimsical Archipelago. The islands sparkle in your wake!</p>
-    <button class="btn-p" onclick="restartGame()">🌸 Play Again</button>
-    <button class="btn-s" onclick="openMap()">🗺 View Map</button>
+  <canvas id="lumis-canvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+  <div class="win-panel" style="position:relative;z-index:2;background:rgba(240,222,194,0.96);">
+    <canvas id="lumis-mini" width="120" height="120" style="display:block;margin:0 auto 10px;"></canvas>
+    <h1 id="win-title" style="opacity:0;transition:opacity 1s;">Lumis is Whole Again</h1>
+    <div class="sub" id="win-sub" style="opacity:0;transition:opacity 1s 0.5s;">All 6 Islands • 30 Crystals • The Archipelago Shines</div>
+    <p id="win-quote" style="opacity:0;transition:opacity 1s 1s;font-style:italic;color:#9B9AE2;">"You walked so far for a stranger. But perhaps… you were never a stranger at all. Thank you, dream-walker. I remember everything now."<br><br><span style="font-style:normal;color:#4F4261;">— Lumis</span></p>
+    <div id="win-score-line" style="opacity:0;transition:opacity 1s 1.5s;font-size:18px;font-weight:800;color:#EBB21A;margin-bottom:16px;">Final Score: <span id="win-score-val">0</span> ⭐</div>
+    <div id="win-btns" style="opacity:0;transition:opacity 1s 2s;">
+      <button class="btn-p" onclick="restartGame()">🌸 Play Again</button>
+      <button class="btn-s" onclick="openMap()">🗺 View Map</button>
+    </div>
   </div>
 </div>
 
@@ -181,6 +185,7 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
     <div id="action-btn">✨</div>
   </div>
 </div>
+<canvas id="boat-canvas" style="position:fixed;inset:0;z-index:55;pointer-events:none;opacity:0;transition:opacity 0.3s;"></canvas>
 <div id="flash"></div>
 
 <script>
@@ -279,7 +284,7 @@ let player = {
 };
 
 // Scene objects for current island
-let crystals = [], decorations = [], particles = [], clouds = [];
+let crystals = [], decorations = [], particles = [], clouds = [], tweenCrystals = [];
 let critter = {wx:0.35, wy:0.65, tx:0.35, ty:0.65, facing:1, t:0, waitT:0, state:'idle'};
 let ambientParticles = [];
 let idleTimer = 0;
@@ -1184,6 +1189,7 @@ function renderScene(t) {
     console.error('drawList error:',e);
   } });
   drawParticles();
+  drawTweenCrystals(performance.now()/1000);
 }
 
 function drawDecor(d, t) {
@@ -1223,6 +1229,7 @@ function updatePlayer(dt) {
   if(dx||dy){
     player.stepT+=dt;
     idleTimer=0;
+    if(audioCtx) playFootstep();
     if(dx>0.1) player.facing=1;
     if(dx<-0.1) player.facing=-1;
   } else {
@@ -1251,34 +1258,75 @@ function updatePlayer(dt) {
     const dist=Math.hypot(px-cx2,py-cy2);
     const sc=depthScale(player.wy-0.18)*50;
     if(dist<sc) collectCrystal(cx);
+    else if(dist < sc*3.5) playCrystalNear();
   });
 }
 
 function collectCrystal(cx) {
-  cx.collected=true;
-  // Screen flash on collect
-  const fl = document.getElementById('flash');
-  if(fl){ fl.style.background='rgba(235,178,26,0.35)'; fl.style.opacity='1'; setTimeout(()=>{fl.style.opacity='0';},300); }
-  // Score pop
-  const {sx,sy} = ws(cx.wx,cx.wy);
-  particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
-  if(cx.lore) particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:cx.lore,isLore:true});
-  for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
+  if(cx.collected||cx.tweening) return;
+  cx.tweening=true;
+  // Start tween: crystal flies toward player
+  const {sx:startX,sy:startY}=ws(cx.wx,cx.wy);
+  tweenCrystals.push({cx, startX, startY, t:0, dur:0.38,
+    gemIdx:crystalsCollected, lore:cx.lore});
   crystalsCollected++;
-  score+=100;
-  const gem=document.getElementById(`g${crystalsCollected-1}`);
-  if(gem){
-  gem.querySelector('polygon').setAttribute('fill',P.lavender);
-  gem.classList.add('lit');
-  gem.style.transform='scale(1.5)';
-  gem.style.transition='transform 0.15s ease-out';
-  setTimeout(()=>{gem.style.transform='scale(1)';gem.style.transition='transform 0.3s ease-in';},150);
-}
-  document.getElementById('score-val').textContent=score;
-  spawnBurst(cx.wx,cx.wy,18);
+  // Play collect sound immediately
   playCrystalCollect();
   player.collectAnim=1.0;
-  if(crystalsCollected>=CRYSTALS_PER_ISLAND) setTimeout(onIslandComplete,600);
+  if(crystalsCollected>=CRYSTALS_PER_ISLAND) setTimeout(onIslandComplete,700);
+}
+
+function finishCrystalCollect(tc) {
+  const cx=tc.cx; cx.collected=true; cx.tweening=false;
+  // Screen flash
+  const fl=document.getElementById('flash');
+  if(fl){fl.style.background='rgba(235,178,26,0.35)';fl.style.opacity='1';setTimeout(()=>{fl.style.opacity='0';},300);}
+  // Burst at player position
+  const {sx,sy}=ws(player.wx,player.wy);
+  score+=100;
+  particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
+  if(tc.lore) particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:tc.lore,isLore:true});
+  for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
+  const gem=document.getElementById(`g${tc.gemIdx}`);
+  if(gem){gem.querySelector('polygon').setAttribute('fill',P.lavender);gem.classList.add('lit');
+    gem.style.transform='scale(1.5)';gem.style.transition='transform 0.15s ease-out';
+    setTimeout(()=>{gem.style.transform='scale(1)';gem.style.transition='transform 0.3s ease-in';},150);}
+  document.getElementById('score-val').textContent=score;
+  spawnBurst(player.wx,player.wy,18);
+}
+
+function updateTweenCrystals(dt) {
+  for(let i=tweenCrystals.length-1;i>=0;i--) {
+    const tc=tweenCrystals[i];
+    tc.t+=dt;
+    const prog=Math.min(1,tc.t/tc.dur);
+    // ease-in-out
+    const ease=prog<0.5?2*prog*prog:1-Math.pow(-2*prog+2,2)/2;
+    const {sx:px,sy:py}=ws(player.wx,player.wy-0.04);
+    tc.curX=tc.startX+(px-tc.startX)*ease;
+    tc.curY=tc.startY+(py-tc.startY)*ease - Math.sin(prog*Math.PI)*30; // arc upward
+    tc.scale=(1-ease*0.4); // shrink as it arrives
+    if(prog>=1){finishCrystalCollect(tc);tweenCrystals.splice(i,1);}
+  }
+}
+
+function drawTweenCrystals(t) {
+  tweenCrystals.forEach(tc=>{
+    if(!tc.curX) return;
+    const sc=(depthScale(tc.cx.wy-0.18)*1.4)*tc.scale;
+    ctx.save();
+    ctx.translate(tc.curX,tc.curY);
+    ctx.rotate(t*3+tc.cx.phase);
+    ctx.shadowColor=P.lavender; ctx.shadowBlur=18;
+    const gs=12*sc;
+    ctx.beginPath();
+    ctx.moveTo(0,-gs*1.1);ctx.lineTo(gs,0);ctx.lineTo(0,gs*0.8);ctx.lineTo(-gs,0);
+    ctx.closePath();
+    ctx.fillStyle=P.lavender; ctx.fill();
+    ctx.beginPath();ctx.moveTo(0,-gs*1.1);ctx.lineTo(gs,0);ctx.lineTo(0,gs*0.8);
+    ctx.fillStyle=darken(P.lavender,0.25);ctx.fill();
+    ctx.restore();
+  });
 }
 
 function tryBunnyInteract() {
@@ -1317,7 +1365,7 @@ function onIslandComplete() {
   playIslandUnlock();
   if(currentIsland>=ISLANDS.length-1){
     gameRunning=false;
-    setTimeout(()=>document.getElementById('win-screen').classList.remove('hidden'),800);
+    setTimeout(()=>showWinScreen(),800);
   } else {
     const travelHints = [
       "Open the map (M) to sail to the next island! ⛵",
@@ -1343,6 +1391,7 @@ function gameLoop(now) {
   updateClouds(dt);
   updateParticles(dt);
   updateAmbientParticles(dt);
+  updateTweenCrystals(dt);
   renderScene(t);
 }
 
@@ -1373,6 +1422,13 @@ function drawMapCanvas() {
     mctx.beginPath(); mctx.arc(px,py,22,0,Math.PI*2);
     mctx.fillStyle=locked?rgba(P.plum,0.35):ISLANDS[i].grass||'#8BBF6A'; mctx.fill();
     mctx.strokeStyle=cleared?P.gold:(isCur?P.coral:P.plum); mctx.lineWidth=isCur?3:2; mctx.stroke();
+    // Sparkle ring on cleared islands
+    if(cleared){
+      const sr=22+Math.sin(Date.now()/400+i)*4;
+      mctx.beginPath();mctx.arc(px,py,sr,0,Math.PI*2);
+      mctx.strokeStyle=`rgba(235,178,26,${0.3+0.3*Math.abs(Math.sin(Date.now()/500+i))})`;
+      mctx.lineWidth=2;mctx.stroke();
+    }
     mctx.font='15px Nunito'; mctx.textAlign='center'; mctx.textBaseline='middle';
     mctx.fillStyle=P.cream;
     mctx.fillText(cleared?'✓':(isCur?'★':(locked?'🔒':String(i+1))),px,py);
@@ -1399,13 +1455,18 @@ function drawMapCanvas() {
   window._mapPos=pos;
 }
 
+let mapAnimId=null;
 function openMap(){
   drawMapCanvas();
   document.getElementById('map-screen').classList.remove('hidden');
   if(animId){cancelAnimationFrame(animId);animId=null;}
+  // Animate map for sparkles
+  function mapLoop(){if(!document.getElementById('map-screen').classList.contains('hidden')){drawMapCanvas();mapAnimId=requestAnimationFrame(mapLoop);}}
+  mapAnimId=requestAnimationFrame(mapLoop);
 }
 function closeMap(){
   document.getElementById('map-screen').classList.add('hidden');
+  if(mapAnimId){cancelAnimationFrame(mapAnimId);mapAnimId=null;}
   if(gameRunning){lastTime=performance.now();animId=requestAnimationFrame(gameLoop);}
 }
 
@@ -1427,6 +1488,32 @@ function playTone(freq,type,gain,dur,delay){
   o.start(t);o.stop(t+dur+0.05);
 }
 function playCrystalCollect(){[261.63,329.63,392,523.25].forEach((f,i)=>playTone(f,'triangle',0.18,0.25,i*0.09));}
+
+// Footstep sound — soft thud
+let _lastStep=0;
+function playFootstep(){
+  if(!audioCtx||!soundOn) return;
+  const now=audioCtx.currentTime;
+  if(now-_lastStep<0.28) return;
+  _lastStep=now;
+  // Soft low thud
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);
+  o.type='sine';o.frequency.setValueAtTime(120,now);o.frequency.exponentialRampToValueAtTime(60,now+0.08);
+  g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.04,now+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,now+0.09);
+  o.start(now);o.stop(now+0.1);
+}
+
+// Crystal proximity chime — rising note when entering range
+let _lastChime=0;
+function playCrystalNear(){
+  if(!audioCtx||!soundOn) return;
+  const now=audioCtx.currentTime;
+  if(now-_lastChime<2.5) return;
+  _lastChime=now;
+  playTone(783.99,'sine',0.06,0.4,0);
+}
 function playIslandUnlock(){[261.63,329.63,392,523.25,659.25].forEach((f,i)=>playTone(f,'sine',0.15,0.4,i*0.12));playTone(880,'triangle',0.1,0.6,0.65);}
 function startAmbient(){
   if(!audioCtx||!soundOn||ambientStarted)return;
@@ -1489,7 +1576,7 @@ function loadIsland(idx){
   currentIsland=idx; crystalsCollected=0;
   for(let i=0;i<5;i++){const g=document.getElementById(`g${i}`);if(g){g.querySelector('polygon').setAttribute('fill',P.lilac);g.classList.remove('lit');}}
   player.wx=0.5;player.wy=0.78;player.facing=1;player.collectAnim=0;
-  particles=[]; ambientParticles=[];
+  particles=[]; ambientParticles=[]; tweenCrystals=[];
   buildScene(idx);spawnCrystals(idx);initClouds();initCritter();initAmbientParticles(idx);
   islandStartTime=performance.now()/1000;
   const lbl=document.getElementById('island-label');
@@ -1499,14 +1586,87 @@ function loadIsland(idx){
 }
 
 // ============= TRAVEL =============
+function animateBoat(onDone) {
+  const bc=document.getElementById('boat-canvas');
+  if(!bc){onDone();return;}
+  bc.width=W;bc.height=H;
+  const bctx=bc.getContext('2d');
+  bc.style.opacity='1';
+  let bt=0;
+  const dur=1.4; // seconds
+  const startT=performance.now()/1000;
+  function frame(){
+    const now=performance.now()/1000;
+    bt=now-startT;
+    bctx.clearRect(0,0,W,H);
+    // Dark sea overlay fading in then out
+    const prog=bt/dur;
+    const alpha=prog<0.4?(prog/0.4)*0.88:(prog<0.75?0.88:0.88-(prog-0.75)/0.25*0.88);
+    bctx.fillStyle=`rgba(30,20,60,${Math.min(0.88,alpha)})`;
+    bctx.fillRect(0,0,W,H);
+    // Stars on dark bg
+    for(let s=0;s<30;s++){
+      const sx=(s*137.5)%W, sy=(s*73.3)%H*0.6+20;
+      const twink=0.3+0.7*Math.abs(Math.sin(bt*2+s));
+      bctx.globalAlpha=twink*Math.min(1,prog/0.3);
+      bctx.fillStyle='#EBB21A';
+      bctx.beginPath();bctx.arc(sx,sy,1.2,0,Math.PI*2);bctx.fill();
+    }
+    bctx.globalAlpha=1;
+    // Boat arc across screen
+    if(prog>0.1&&prog<0.9){
+      const tp=(prog-0.1)/0.8;
+      const bx=tp*W;
+      const by=H*0.62-Math.sin(tp*Math.PI)*H*0.18;
+      // Wake
+      bctx.strokeStyle='rgba(255,255,255,0.25)';bctx.lineWidth=2;
+      bctx.beginPath();bctx.moveTo(0,by+18);
+      for(let wx=0;wx<bx;wx+=4){bctx.lineTo(wx,by+18+Math.sin(wx*0.05+bt*3)*4);}
+      bctx.stroke();
+      // Boat hull
+      bctx.save();bctx.translate(bx,by);
+      bctx.fillStyle='#F0DEC2';
+      bctx.beginPath();bctx.moveTo(-22,0);bctx.quadraticCurveTo(0,16,22,0);bctx.closePath();bctx.fill();
+      bctx.strokeStyle='#4F4261';bctx.lineWidth=1.5;bctx.stroke();
+      // Sail
+      bctx.fillStyle='#9B9AE2';
+      bctx.beginPath();bctx.moveTo(0,0);bctx.lineTo(0,-32);bctx.lineTo(18,-10);bctx.closePath();bctx.fill();
+      bctx.fillStyle='#EB6259';
+      bctx.beginPath();bctx.moveTo(0,0);bctx.lineTo(0,-32);bctx.lineTo(-14,-14);bctx.closePath();bctx.fill();
+      // Mast
+      bctx.strokeStyle='#4F4261';bctx.lineWidth=2;bctx.beginPath();bctx.moveTo(0,0);bctx.lineTo(0,-34);bctx.stroke();
+      // Flag
+      bctx.fillStyle='#EBB21A';bctx.font='10px serif';bctx.fillText('✨',-5,-36);
+      bctx.restore();
+    }
+    // Text
+    if(prog>0.25&&prog<0.85){
+      const ta=Math.min(1,(prog-0.25)/0.15)*Math.min(1,(0.85-prog)/0.1);
+      bctx.globalAlpha=ta;
+      bctx.fillStyle='#F0DEC2';bctx.font='bold 18px Nunito';bctx.textAlign='center';
+      bctx.fillText('Sailing to new shores… ⛵',W/2,H*0.42);
+    }
+    bctx.globalAlpha=1;
+    if(bt<dur) requestAnimationFrame(frame);
+    else { bc.style.opacity='0'; setTimeout(onDone,320); }
+  }
+  requestAnimationFrame(frame);
+}
+
 function travelToIsland(idx){
   closeMap();
-  const fl=document.getElementById('flash');
-  fl.style.transition='opacity 0.3s';fl.style.opacity='0.85';
-  setTimeout(()=>{loadIsland(idx);fl.style.opacity='0';},320);
+  // Show boat sailing animation, then load island
+  document.getElementById('boat-canvas').width=W;document.getElementById('boat-canvas').height=H;
+  animateBoat(()=>{
+    loadIsland(idx);
+    if(!gameRunning){gameRunning=true;}
+    lastTime=performance.now();
+    if(!animId) animId=requestAnimationFrame(gameLoop);
+  });
+  // Keep game loop running during animation
   if(!gameRunning){gameRunning=true;}
   lastTime=performance.now();
-  animId=requestAnimationFrame(gameLoop);
+  if(!animId) animId=requestAnimationFrame(gameLoop);
 }
 
 // ============= START / RESTART =============
@@ -1545,6 +1705,85 @@ function startGame(){
   lastTime=performance.now();
   animId=requestAnimationFrame(gameLoop);
 }
+function showWinScreen() {
+  const ws=document.getElementById('win-screen');
+  ws.classList.remove('hidden');
+  // Update score
+  document.getElementById('win-score-val').textContent=score;
+  // Fade in text elements
+  setTimeout(()=>{document.getElementById('win-title').style.opacity='1';},300);
+  setTimeout(()=>{document.getElementById('win-sub').style.opacity='1';},700);
+  setTimeout(()=>{document.getElementById('win-quote').style.opacity='1';},1200);
+  setTimeout(()=>{document.getElementById('win-score-line').style.opacity='1';},1800);
+  setTimeout(()=>{document.getElementById('win-btns').style.opacity='1';},2400);
+  // Animate Lumis on mini canvas
+  const mc=document.getElementById('lumis-mini');
+  if(!mc) return;
+  const mctx=mc.getContext('2d');
+  let lt=0;
+  function drawLumis(t) {
+    mctx.clearRect(0,0,120,120);
+    const cx=60,cy=60;
+    const pulse=0.85+0.15*Math.sin(t*2.2);
+    const rays=10;
+    // Outer glow
+    const og=mctx.createRadialGradient(cx,cy,8,cx,cy,54*pulse);
+    og.addColorStop(0,'rgba(235,178,26,0.55)');og.addColorStop(0.5,'rgba(155,154,226,0.3)');og.addColorStop(1,'rgba(155,154,226,0)');
+    mctx.fillStyle=og;mctx.beginPath();mctx.arc(cx,cy,54*pulse,0,Math.PI*2);mctx.fill();
+    // Star rays
+    for(let r=0;r<rays;r++){
+      const a=(r/rays)*Math.PI*2+t*0.4;
+      const rl=18+Math.sin(t*1.8+r)*6;
+      mctx.save();mctx.translate(cx,cy);mctx.rotate(a);
+      mctx.strokeStyle=`rgba(235,178,26,${0.5+0.3*Math.sin(t+r)})`;mctx.lineWidth=2;
+      mctx.beginPath();mctx.moveTo(14,0);mctx.lineTo(14+rl,0);mctx.stroke();
+      mctx.restore();
+    }
+    // Core star body
+    const ig=mctx.createRadialGradient(cx,cy,0,cx,cy,18*pulse);
+    ig.addColorStop(0,'#FFFFFF');ig.addColorStop(0.4,'#EBB21A');ig.addColorStop(1,'rgba(155,154,226,0.8)');
+    mctx.fillStyle=ig;mctx.beginPath();mctx.arc(cx,cy,18*pulse,0,Math.PI*2);mctx.fill();
+    // Inner sparkle points
+    for(let s=0;s<5;s++){
+      const sa=(s/5)*Math.PI*2+t*-0.6;
+      const sd=10*pulse;
+      mctx.save();mctx.translate(cx+Math.cos(sa)*sd,cy+Math.sin(sa)*sd);
+      mctx.fillStyle='rgba(255,255,255,0.9)';
+      mctx.beginPath();mctx.arc(0,0,2.5,0,Math.PI*2);mctx.fill();
+      mctx.restore();
+    }
+    lt+=0.016;
+    requestAnimationFrame(()=>drawLumis(lt));
+  }
+  drawLumis(0);
+  // Animated starfield on bg canvas
+  const bc=document.getElementById('lumis-canvas');
+  if(!bc) return;
+  bc.width=window.innerWidth;bc.height=window.innerHeight;
+  const bctx=bc.getContext('2d');
+  let bt2=0;
+  function drawBg(){
+    if(document.getElementById('win-screen').classList.contains('hidden')) return;
+    bctx.clearRect(0,0,bc.width,bc.height);
+    // Gradient bg
+    const bg=bctx.createLinearGradient(0,0,0,bc.height);
+    bg.addColorStop(0,'#2A2048');bg.addColorStop(0.5,'#4F4261');bg.addColorStop(1,'#9B9AE2');
+    bctx.fillStyle=bg;bctx.fillRect(0,0,bc.width,bc.height);
+    // Drifting star particles
+    for(let s=0;s<60;s++){
+      const sx=((s*137.5+bt2*8)%bc.width);
+      const sy=(s*73.3)%bc.height;
+      const tw=0.3+0.7*Math.abs(Math.sin(bt2*1.5+s*0.7));
+      bctx.globalAlpha=tw*0.8;bctx.fillStyle='#EBB21A';
+      bctx.beginPath();bctx.arc(sx,sy,1.5,0,Math.PI*2);bctx.fill();
+    }
+    bctx.globalAlpha=1;
+    bt2+=0.016;
+    requestAnimationFrame(drawBg);
+  }
+  drawBg();
+}
+
 function restartGame(){
   document.getElementById('win-screen').classList.add('hidden');
   clearProgress();
