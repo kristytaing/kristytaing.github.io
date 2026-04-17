@@ -876,7 +876,11 @@ function renderScene(t) {
   drawList.push({wy:player.wy + 0.005, fn:()=>drawCharacter(t)});
 
   drawList.sort((a,b)=>a.wy-b.wy);
-  drawList.forEach(item=>{ try{item.fn();}catch(e){console.error('drawList error:',e);} });
+  drawList.forEach(item=>{ try{item.fn();}catch(e){
+    ctx.save();ctx.fillStyle='red';ctx.font='12px monospace';
+    ctx.fillText('ERR: '+e.message,10,80);ctx.restore();
+    console.error('drawList error:',e);
+  } });
 
   drawParticles();
 }
