@@ -180,1563 +180,950 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 
 <script>
 // ============================================================
-// CONSTANTS & PALETTE
-// ============================================================
+// ============= PALETTE & ISLANDS =============
 const P = {
   lavender:'#9B9AE2', coral:'#EB6259', lilac:'#C6C3DC',
   gold:'#EBB21A', cream:'#F0DEC2', plum:'#4F4261',
   moss:'#6F7E4A', pink:'#F29FD7'
 };
 
-// Island definitions
 const ISLANDS = [
   { name:'Petal Cove', biome:'meadow',
-    sky:['#C6C3DC','#9B9AE2','#F29FD7'],
-    ground:'#6F7E4A', groundSide:'#4F4261', groundDark:'#3a3050',
-    accent:'#F29FD7', accent2:'#EBB21A',
-    dialogue:"Welcome to Petal Cove! Collect 5 glowing crystals to set sail!" },
+    skyTop:'#F2C9D8', skyMid:'#E8A8C0', skyBot:'#C6A0D4',
+    grass:'#8BBF6A', grassDark:'#6A9E4A', grassLight:'#A8D484',
+    pathCol:'#D4C4A0', rockCol:'#B8A89A', waterCol:'#A8C8E8',
+    treeCol:'#F4C86A', treeDark:'#DFA840', accent:'#F29FD7',
+    dialogue:"Welcome to Petal Cove! Collect 5 glowing crystals!" },
   { name:'Crystal Spire', biome:'crystal',
-    sky:['#9B9AE2','#C6C3DC','#F0DEC2'],
-    ground:'#9B9AE2', groundSide:'#4F4261', groundDark:'#3a3050',
-    accent:'#C6C3DC', accent2:'#F29FD7',
-    dialogue:"Crystal Spire hums with ancient energy. Find the scattered gems!" },
+    skyTop:'#9B9AE2', skyMid:'#C6C3DC', skyBot:'#F0DEC2',
+    grass:'#7A8EC4', grassDark:'#5A6EA4', grassLight:'#9AAEDC',
+    pathCol:'#C6C3DC', rockCol:'#9B9AE2', waterCol:'#C0D8F0',
+    treeCol:'#C6C3DC', treeDark:'#9B9AE2', accent:'#F29FD7',
+    dialogue:"Crystal Spire hums with ancient energy. Find the gems!" },
   { name:'Ember Isles', biome:'desert',
-    sky:['#EBB21A','#EB6259','#F0DEC2'],
-    ground:'#EBB21A', groundSide:'#4F4261', groundDark:'#3a3050',
-    accent:'#EB6259', accent2:'#F0DEC2',
-    dialogue:"Ember Isles burns bright! Collect all crystals before sundown!" },
+    skyTop:'#F4A84A', skyMid:'#EB6259', skyBot:'#F0DEC2',
+    grass:'#C8A84A', grassDark:'#A88430', grassLight:'#E0C86A',
+    pathCol:'#E8D4A0', rockCol:'#C09060', waterCol:'#A8D0C0',
+    treeCol:'#EB6259', treeDark:'#C04040', accent:'#EBB21A',
+    dialogue:"Ember Isles burns bright! Collect all crystals!" },
   { name:'Misty Shores', biome:'beach',
-    sky:['#F0DEC2','#C6C3DC','#9B9AE2'],
-    ground:'#C6C3DC', groundSide:'#4F4261', groundDark:'#3a3050',
-    accent:'#F0DEC2', accent2:'#EB6259',
-    dialogue:"Misty Shores whispers secrets. Seek the shimmering crystals!" },
+    skyTop:'#C0D8F0', skyMid:'#A0C4E8', skyBot:'#F0DEC2',
+    grass:'#A0C888', grassDark:'#80A868', grassLight:'#C0E0A8',
+    pathCol:'#E8D8B8', rockCol:'#C0B8A8', waterCol:'#88C0D8',
+    treeCol:'#88C898', treeDark:'#60A878', accent:'#F0DEC2',
+    dialogue:"Misty Shores whispers secrets. Seek the crystals!" },
   { name:'Verdant Peak', biome:'forest',
-    sky:['#6F7E4A','#9B9AE2','#C6C3DC'],
-    ground:'#6F7E4A', groundSide:'#4F4261', groundDark:'#3a3050',
-    accent:'#EBB21A', accent2:'#F29FD7',
-    dialogue:"Verdant Peak teems with life! The crystals glow among the leaves!" },
+    skyTop:'#7A9A5A', skyMid:'#9B9AE2', skyBot:'#C6C3DC',
+    grass:'#5A8A3A', grassDark:'#3A6A1A', grassLight:'#7AAA5A',
+    pathCol:'#C8B888', rockCol:'#888870', waterCol:'#6888A8',
+    treeCol:'#EBB21A', treeDark:'#C89018', accent:'#F29FD7',
+    dialogue:"Verdant Peak teems with life! Crystals glow in the leaves!" },
   { name:'Starfall Atoll', biome:'night',
-    sky:['#4F4261','#9B9AE2','#C6C3DC'],
-    ground:'#9B9AE2', groundSide:'#3a3050', groundDark:'#2a2040',
-    accent:'#EBB21A', accent2:'#F29FD7',
+    skyTop:'#2A2048', skyMid:'#4F4261', skyBot:'#9B9AE2',
+    grass:'#3A3868', grassDark:'#2A2850', grassLight:'#5A58A0',
+    pathCol:'#6A6888', rockCol:'#4A4868', waterCol:'#3A4868',
+    treeCol:'#9B9AE2', treeDark:'#6A6AAA', accent:'#EBB21A',
     dialogue:"Starfall Atoll — the final island! Claim the last crystals!" }
 ];
 
-// Tile grid: 9x9 island shape (1=ground, 0=water, 2=path)
-const ISLAND_SHAPE = [
-  [0,0,0,1,1,1,0,0,0],
-  [0,0,1,1,1,1,1,0,0],
-  [0,1,1,1,1,1,1,1,0],
-  [1,1,1,1,1,1,1,1,1],
-  [1,1,1,1,1,1,1,1,1],
-  [1,1,1,1,1,1,1,1,1],
-  [0,1,1,1,1,1,1,1,0],
-  [0,0,1,1,1,1,1,0,0],
-  [0,0,0,1,1,1,0,0,0]
-];
-
-const GRID_ROWS = ISLAND_SHAPE.length;
-const GRID_COLS = ISLAND_SHAPE[0].length;
-const TILE_W = 72;   // tile width (diamond)
-const TILE_H = 36;   // tile height (diamond)
-const TILE_DEPTH = 28; // side face height
 const CRYSTALS_PER_ISLAND = 5;
 
-// ============================================================
-// GAME STATE
-// ============================================================
-let canvas, ctx, uiCanvas, uiCtx;
-let W, H, offX, offY;
+// ============= STATE =============
+let canvas, ctx, W, H;
 let currentIsland = 0;
-let islandsCleared = [];  // booleans
+let islandsCleared = [];
 let score = 0;
 let gameRunning = false;
 let dialogueOpen = false;
+let lastTime = 0, animId = null;
+let audioCtx = null, soundOn = true, ambientStarted = false;
+let keys = {}, joyVec = {x:0,y:0};
 
-// Player
+// Player - world coords (0..1 normalized, mapped to scene)
 let player = {
-  col: 4, row: 4,       // grid position (float for smooth movement)
-  px: 0, py: 0,         // pixel position
-  velCol: 0, velRow: 0,
-  facing: 1,            // 1=right, -1=left
-  bobT: 0,              // bob animation time
-  collectAnim: 0,       // flash on collect
-  stepT: 0              // step cycle for legs
+  wx: 0.5, wy: 0.65,   // world position
+  facing: 1,
+  bobT: 0, stepT: 0,
+  collectAnim: 0,
+  scarfT: 0
 };
 
-// Crystals for current island
-let crystals = [];
-let crystalsCollected = 0;
+// Scene objects for current island
+let crystals = [], decorations = [], particles = [], clouds = [];
 
-// Decorations (trees, rocks, flowers)
-let decorations = [];
+// ============= COLOR HELPERS =============
+function hexRgb(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return{r,g,b};}
+function lighten(h,a){const {r,g,b}=hexRgb(h);return`rgb(${Math.min(255,r+(255-r)*a)|0},${Math.min(255,g+(255-g)*a)|0},${Math.min(255,b+(255-b)*a)|0})`;}
+function darken(h,a){const {r,g,b}=hexRgb(h);return`rgb(${r*(1-a)|0},${g*(1-a)|0},${b*(1-a)|0})`;}
+function rgba(h,a){const {r,g,b}=hexRgb(h);return`rgba(${r},${g},${b},${a})`;}
 
-// Particles
-let particles = [];
-
-// Clouds
-let clouds = [];
-
-// Input state
-let keys = {};
-let joyVec = {x:0, y:0};
-
-// Audio
-let audioCtx = null;
-let soundOn = true;
-let ambientStarted = false;
-
-// Map canvas
-let mapCanvas, mapCtx;
-
-// Animation
-let lastTime = 0;
-let animId = null;
-
-// ============================================================
-// ISO PROJECTION
-// ============================================================
-function isoProject(col, row, elev) {
-  // elev=0 is ground surface
-  const x = offX + (col - row) * (TILE_W / 2);
-  const y = offY + (col + row) * (TILE_H / 2) - elev;
-  return {x, y};
+// World -> screen mapping
+// Scene is a gentle top-down perspective: y maps to depth (higher y = further back = higher on screen)
+function ws(wx, wy) {
+  // wx 0..1 = left..right, wy 0..1 = near..far
+  const sx = wx * W;
+  // perspective: things farther away are higher on screen and slightly compressed
+  const sy = H * 0.18 + wy * H * 0.72;
+  return {sx, sy};
+}
+// Scale objects by depth (perspective)
+function depthScale(wy) {
+  return 0.45 + wy * 0.75;
 }
 
-function tileCenter(col, row) {
-  return isoProject(col + 0.5, row + 0.5, 0);
+
+// ============= SKY =============
+function drawSky(isl) {
+  const g = ctx.createLinearGradient(0,0,0,H*0.55);
+  g.addColorStop(0, isl.skyTop);
+  g.addColorStop(0.5, isl.skyMid);
+  g.addColorStop(1, isl.skyBot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H*0.55);
 }
 
-// ============================================================
-// DRAW TILE (top face + left side + right side)
-// ============================================================
-function drawTile(col, row, topColor, leftColor, rightColor, highlight) {
-  const x = offX + (col - row) * (TILE_W / 2);
-  const y = offY + (col + row) * (TILE_H / 2);
-  const hw = TILE_W / 2;
-  const hh = TILE_H / 2;
-  const d = TILE_DEPTH;
-
-  // Top face (diamond)
+// ============= GROUND (rolling hills) =============
+function drawGround(isl) {
+  // Far hill band
+  const g1 = ctx.createLinearGradient(0, H*0.35, 0, H*0.65);
+  g1.addColorStop(0, isl.grassLight);
+  g1.addColorStop(1, isl.grass);
+  ctx.fillStyle = g1;
   ctx.beginPath();
-  ctx.moveTo(x,      y - hh);
-  ctx.lineTo(x + hw, y);
-  ctx.lineTo(x,      y + hh);
-  ctx.lineTo(x - hw, y);
-  ctx.closePath();
-  ctx.fillStyle = highlight ? lighten(topColor, 0.15) : topColor;
+  ctx.moveTo(0, H*0.44);
+  ctx.bezierCurveTo(W*0.2, H*0.38, W*0.5, H*0.42, W*0.75, H*0.40);
+  ctx.bezierCurveTo(W*0.88, H*0.39, W*0.95, H*0.43, W, H*0.44);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
   ctx.fill();
-  if (highlight) {
-    ctx.strokeStyle = '#ffffff44';
-    ctx.lineWidth = 1;
+
+  // Mid ground - main play area
+  const g2 = ctx.createLinearGradient(0, H*0.48, 0, H);
+  g2.addColorStop(0, isl.grass);
+  g2.addColorStop(0.6, isl.grassDark);
+  g2.addColorStop(1, darken(isl.grassDark, 0.2));
+  ctx.fillStyle = g2;
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.52);
+  ctx.bezierCurveTo(W*0.15, H*0.48, W*0.4, H*0.50, W*0.6, H*0.49);
+  ctx.bezierCurveTo(W*0.78, H*0.48, W*0.9, H*0.52, W, H*0.50);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+  ctx.fill();
+
+  // Grass texture streaks
+  ctx.strokeStyle = rgba(isl.grassDark, 0.18);
+  ctx.lineWidth = 1.5;
+  for (let i=0;i<18;i++){
+    const gx = (i/18)*W + Math.sin(i*1.3)*30;
+    const gy = H*0.56 + Math.sin(i*0.8)*H*0.06;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.lineTo(gx+12, gy+H*0.08);
     ctx.stroke();
   }
-
-  // Left side face (bottom-left edge going down)
-  ctx.beginPath();
-  ctx.moveTo(x - hw, y);
-  ctx.lineTo(x,      y + hh);
-  ctx.lineTo(x,      y + hh + d);
-  ctx.lineTo(x - hw, y + d);
-  ctx.closePath();
-  ctx.fillStyle = leftColor;
-  ctx.fill();
-
-  // Right side face (bottom-right edge going down)
-  ctx.beginPath();
-  ctx.moveTo(x,      y + hh);
-  ctx.lineTo(x + hw, y);
-  ctx.lineTo(x + hw, y + d);
-  ctx.lineTo(x,      y + hh + d);
-  ctx.closePath();
-  ctx.fillStyle = rightColor;
-  ctx.fill();
-
-  // Subtle edge lines
-  ctx.strokeStyle = P.plum + '55';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(x,      y - hh);
-  ctx.lineTo(x + hw, y);
-  ctx.lineTo(x,      y + hh);
-  ctx.lineTo(x - hw, y);
-  ctx.closePath();
-  ctx.stroke();
 }
 
-// ============================================================
-// COLOR HELPERS
-// ============================================================
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return {r,g,b};
-}
-function lighten(hex, amt) {
-  const {r,g,b} = hexToRgb(hex);
-  const rr = Math.min(255, Math.round(r + (255-r)*amt));
-  const gg = Math.min(255, Math.round(g + (255-g)*amt));
-  const bb = Math.min(255, Math.round(b + (255-b)*amt));
-  return `rgb(${rr},${gg},${bb})`;
-}
-function darken(hex, amt) {
-  const {r,g,b} = hexToRgb(hex);
-  const rr = Math.max(0, Math.round(r * (1-amt)));
-  const gg = Math.max(0, Math.round(g * (1-amt)));
-  const bb = Math.max(0, Math.round(b * (1-amt)));
-  return `rgb(${rr},${gg},${bb})`;
-}
-function hexAlpha(hex, a) {
-  const {r,g,b} = hexToRgb(hex);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-// ============================================================
-// DRAW SKY (3 color bands)
-// ============================================================
-function drawSky(island) {
-  const sky = island.sky;
-  const bandH = H / 3;
-  const grd = ctx.createLinearGradient(0, 0, 0, H * 0.7);
-  grd.addColorStop(0,   sky[0]);
-  grd.addColorStop(0.45, sky[1]);
-  grd.addColorStop(1,   sky[2]);
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
-
-  // Horizon color band accent
-  ctx.fillStyle = hexAlpha(sky[1], 0.35);
-  ctx.fillRect(0, H * 0.38, W, H * 0.15);
-}
-
-// ============================================================
-// DRAW CLOUDS
-// ============================================================
-function initClouds() {
-  clouds = [];
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * W,
-      y: 30 + Math.random() * (H * 0.3),
-      speed: 0.12 + Math.random() * 0.18,
-      scale: 0.7 + Math.random() * 0.8,
-      alpha: 0.55 + Math.random() * 0.3
-    });
-  }
-}
-
-function drawCloud(x, y, scale, alpha) {
+// ============= PATH =============
+function drawPath(isl) {
+  // Winding stone path from near-bottom center toward mid-scene
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = P.cream;
-  const r = 18 * scale;
-  // pom-pom style flat cloud: 3 circles
-  [[0,0,1.0],[r*0.9,-r*0.3,0.75],[-r*0.9,-r*0.3,0.75],[r*1.6,r*0.1,0.6],[-r*1.6,r*0.1,0.6]].forEach(([dx,dy,sc])=>{
+  ctx.strokeStyle = isl.pathCol;
+  ctx.lineWidth = W*0.07;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // Outer path (lighter)
+  ctx.beginPath();
+  ctx.moveTo(W*0.48, H*0.98);
+  ctx.bezierCurveTo(W*0.46, H*0.82, W*0.52, H*0.70, W*0.50, H*0.58);
+  ctx.bezierCurveTo(W*0.49, H*0.52, W*0.47, H*0.48, W*0.45, H*0.44);
+  ctx.stroke();
+  // Inner highlight
+  ctx.strokeStyle = lighten(isl.pathCol, 0.18);
+  ctx.lineWidth = W*0.035;
+  ctx.beginPath();
+  ctx.moveTo(W*0.48, H*0.98);
+  ctx.bezierCurveTo(W*0.46, H*0.82, W*0.52, H*0.70, W*0.50, H*0.58);
+  ctx.bezierCurveTo(W*0.49, H*0.52, W*0.47, H*0.48, W*0.45, H*0.44);
+  ctx.stroke();
+  // Stone dots along path
+  ctx.restore();
+  const stones = [[0.47,0.92],[0.49,0.84],[0.46,0.76],[0.51,0.70],[0.50,0.63],[0.48,0.57],[0.46,0.51],[0.45,0.46]];
+  stones.forEach(([rx,ry])=>{
+    const sc = depthScale(ry-0.18)*0.6;
     ctx.beginPath();
-    ctx.arc(x+dx, y+dy, r*sc, 0, Math.PI*2);
+    ctx.ellipse(rx*W, ry*H, 18*sc, 10*sc, Math.PI*0.1, 0, Math.PI*2);
+    ctx.fillStyle = darken(isl.pathCol, 0.08);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(rx*W-4*sc, ry*H-3*sc, 10*sc, 6*sc, 0, 0, Math.PI*2);
+    ctx.fillStyle = lighten(isl.pathCol, 0.15);
     ctx.fill();
   });
-  ctx.restore();
 }
 
-function updateClouds(dt) {
-  clouds.forEach(c => {
-    c.x += c.speed * dt * 60 * 0.016;
-    if (c.x > W + 120) c.x = -120;
+// ============= WATER POOLS =============
+function drawPools(isl) {
+  const pools = [[0.2,0.62,0.11,0.045],[0.78,0.58,0.09,0.038]];
+  pools.forEach(([rx,ry,rw,rh])=>{
+    const x=rx*W, y=ry*H, ew=rw*W, eh=rh*H;
+    // Pool body
+    const g = ctx.createRadialGradient(x,y,2,x,y,ew);
+    g.addColorStop(0, lighten(isl.waterCol, 0.3));
+    g.addColorStop(0.6, isl.waterCol);
+    g.addColorStop(1, darken(isl.waterCol, 0.15));
+    ctx.beginPath();
+    ctx.ellipse(x, y, ew, eh, 0, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    // Sky reflection shimmer
+    ctx.beginPath();
+    ctx.ellipse(x-ew*0.2, y-eh*0.15, ew*0.45, eh*0.3, -0.3, 0, Math.PI*2);
+    ctx.fillStyle = rgba(isl.skyMid, 0.45);
+    ctx.fill();
+    // Edge
+    ctx.beginPath();
+    ctx.ellipse(x, y, ew, eh, 0, 0, Math.PI*2);
+    ctx.strokeStyle = rgba(isl.waterCol, 0.5);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   });
 }
 
-// ============================================================
-// BUILD ISLAND DECORATIONS
-// ============================================================
-function buildDecorations(islandIdx) {
-  decorations = [];
-  const island = ISLANDS[islandIdx];
-  const usedTiles = new Set();
 
-  // Place decorations on border/edge tiles
-  for (let r = 0; r < GRID_ROWS; r++) {
-    for (let c = 0; c < GRID_COLS; c++) {
-      if (!ISLAND_SHAPE[r][c]) continue;
-      const key = `${r},${c}`;
-      // Check if near edge
-      const isEdge = (r===0||r===GRID_ROWS-1||c===0||c===GRID_COLS-1||
-        !ISLAND_SHAPE[r-1]?.[c]||!ISLAND_SHAPE[r+1]?.[c]||
-        !ISLAND_SHAPE[r]?.[c-1]||!ISLAND_SHAPE[r]?.[c+1]);
-      // Place tree on some tiles
-      if (Math.random() < (isEdge ? 0.55 : 0.12) && !usedTiles.has(key)) {
-        const decType = getDecorType(island.biome);
-        decorations.push({
-          col: c, row: r,
-          type: decType,
-          color: island.accent,
-          color2: island.accent2,
-          phase: Math.random() * Math.PI * 2,
-          scale: 0.85 + Math.random() * 0.3
-        });
-        usedTiles.add(key);
-      }
-    }
-  }
-}
-
-function getDecorType(biome) {
-  const byBiome = {
-    meadow: ['pompom','pompom','flower','flower','rock'],
-    crystal: ['crystal_rock','crystal_rock','spike','spike','rock'],
-    desert:  ['cactus','cactus','rock','dune','sand_flower'],
-    beach:   ['palm','palm','coral','seashell','rock'],
-    forest:  ['pompom','pompom','pompom','mushroom','rock'],
-    night:   ['crystal_rock','spike','star_flower','pompom','rock']
-  };
-  const opts = byBiome[biome] || ['pompom','rock'];
-  return opts[Math.floor(Math.random()*opts.length)];
-}
-
-// ============================================================
-// DRAW DECORATION
-// ============================================================
-function drawDecoration(dec, t) {
-  const {x, y} = isoProject(dec.col + 0.5, dec.row + 0.5, 0);
-  const bob = Math.sin(t * 1.2 + dec.phase) * 2;
-  const sc = dec.scale;
-  ctx.save();
-  ctx.translate(x, y - TILE_DEPTH - 4 + bob);
-
-  switch(dec.type) {
-    case 'pompom':
-      drawPompom(0, 0, sc, dec.color, dec.color2);
-      break;
-    case 'flower':
-      drawFlower(0, 0, sc, dec.color);
-      break;
-    case 'rock':
-      drawRock(0, 0, sc, dec.color);
-      break;
-    case 'crystal_rock':
-    case 'spike':
-      drawCrystalSpike(0, 0, sc, dec.color);
-      break;
-    case 'cactus':
-      drawCactus(0, 0, sc, dec.color);
-      break;
-    case 'palm':
-      drawPalm(0, 0, sc, dec.color, dec.color2);
-      break;
-    case 'mushroom':
-      drawMushroom(0, 0, sc, dec.color);
-      break;
-    case 'coral':
-      drawCoral(0, 0, sc, dec.color);
-      break;
-    case 'sand_flower':
-    case 'seashell':
-    case 'dune':
-    case 'star_flower':
-      drawFlower(0, 0, sc, dec.color2 || dec.color);
-      break;
-    default:
-      drawPompom(0, 0, sc, dec.color, dec.color2);
-  }
-  ctx.restore();
-}
-
-// --- Pompom tree (large flat circle with trunk) ---
-function drawPompom(x, y, sc, col, col2) {
-  const tr = 5 * sc;
-  const th = 22 * sc;
-  // trunk
-  ctx.fillStyle = P.plum;
-  ctx.fillRect(x - tr/2, y - th, tr, th);
-  // foliage — big flat circle
-  const fr = 20 * sc;
-  ctx.beginPath();
-  ctx.arc(x, y - th - fr * 0.6, fr, 0, Math.PI * 2);
-  ctx.fillStyle = col;
-  ctx.fill();
-  // highlight dot
-  ctx.beginPath();
-  ctx.arc(x - fr*0.3, y - th - fr*0.8, fr*0.35, 0, Math.PI * 2);
-  ctx.fillStyle = lighten(col, 0.25);
-  ctx.fill();
-  // optional 2nd smaller circle
-  ctx.beginPath();
-  ctx.arc(x + fr*0.55, y - th - fr*0.3, fr*0.55, 0, Math.PI*2);
-  ctx.fillStyle = col2 || darken(col, 0.15);
-  ctx.fill();
-}
-
-// --- Flower ---
-function drawFlower(x, y, sc, col) {
-  const pr = 5 * sc;
-  const ps = 7;
-  for (let i = 0; i < ps; i++) {
-    const a = (i / ps) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.arc(x + Math.cos(a)*pr*1.4, y + Math.sin(a)*pr*1.4, pr, 0, Math.PI*2);
-    ctx.fillStyle = col;
-    ctx.fill();
-  }
-  ctx.beginPath();
-  ctx.arc(x, y, pr*0.9, 0, Math.PI*2);
-  ctx.fillStyle = P.gold;
-  ctx.fill();
-  // stem
-  ctx.strokeStyle = P.moss;
-  ctx.lineWidth = 2 * sc;
-  ctx.beginPath();
-  ctx.moveTo(x, y + pr);
-  ctx.lineTo(x, y + pr + 12*sc);
-  ctx.stroke();
-}
-
-// --- Rock ---
+// ============= ROCKS =============
 function drawRock(x, y, sc, col) {
+  // Large rounded boulder, reference-style
   ctx.beginPath();
-  ctx.ellipse(x, y - 8*sc, 12*sc, 8*sc, 0, 0, Math.PI*2);
+  ctx.ellipse(x, y, 28*sc, 20*sc, -0.15, 0, Math.PI*2);
   ctx.fillStyle = col;
   ctx.fill();
+  // Top highlight
   ctx.beginPath();
-  ctx.ellipse(x - 3*sc, y - 10*sc, 7*sc, 5*sc, -0.3, 0, Math.PI*2);
-  ctx.fillStyle = lighten(col, 0.2);
+  ctx.ellipse(x-6*sc, y-6*sc, 14*sc, 9*sc, -0.2, 0, Math.PI*2);
+  ctx.fillStyle = lighten(col, 0.22);
   ctx.fill();
-  // side face on rock
+  // Shadow bottom
   ctx.beginPath();
-  ctx.ellipse(x, y - 4*sc, 12*sc, 5*sc, 0, 0, Math.PI);
-  ctx.fillStyle = darken(col, 0.3);
+  ctx.ellipse(x+4*sc, y+6*sc, 20*sc, 8*sc, 0, 0, Math.PI);
+  ctx.fillStyle = rgba(P.plum, 0.18);
+  ctx.fill();
+  // Ground shadow
+  ctx.beginPath();
+  ctx.ellipse(x, y+14*sc, 22*sc, 5*sc, 0, 0, Math.PI*2);
+  ctx.fillStyle = rgba(P.plum, 0.12);
   ctx.fill();
 }
 
-// --- Crystal spike ---
-function drawCrystalSpike(x, y, sc, col) {
-  const h = 30*sc;
-  const w = 9*sc;
-  // shadow/side
+// ============= POM-POM TREE =============
+function drawTree(x, y, sc, col, colDark, t, phase) {
+  const bob = Math.sin(t*0.8+phase)*2*sc;
+  // Ground shadow
   ctx.beginPath();
-  ctx.moveTo(x - w, y);
-  ctx.lineTo(x, y - h);
-  ctx.lineTo(x, y);
-  ctx.fillStyle = darken(col, 0.35);
+  ctx.ellipse(x, y+4*sc, 22*sc, 7*sc, 0, 0, Math.PI*2);
+  ctx.fillStyle = rgba(P.plum, 0.13);
   ctx.fill();
-  // main face
+  // Trunk (barely visible, short)
+  ctx.fillStyle = darken(colDark, 0.3);
   ctx.beginPath();
-  ctx.moveTo(x - w, y);
-  ctx.lineTo(x, y - h);
-  ctx.lineTo(x + w, y);
+  ctx.roundRect(x-4*sc, y-18*sc+bob, 8*sc, 22*sc, 3*sc);
+  ctx.fill();
+  // Main foliage ball - large soft circle
+  const fr = 30*sc;
+  // Back shadow circle
+  ctx.beginPath();
+  ctx.arc(x+4*sc, y-46*sc+bob, fr*0.88, 0, Math.PI*2);
+  ctx.fillStyle = colDark;
+  ctx.fill();
+  // Main circle
+  ctx.beginPath();
+  ctx.arc(x, y-48*sc+bob, fr, 0, Math.PI*2);
   ctx.fillStyle = col;
   ctx.fill();
-  // highlight
+  // Soft inner glow highlight
+  const g = ctx.createRadialGradient(x-fr*0.3, y-54*sc+bob, 2, x, y-48*sc+bob, fr);
+  g.addColorStop(0, rgba('#ffffff', 0.38));
+  g.addColorStop(0.5, rgba(col, 0));
+  g.addColorStop(1, rgba(col, 0));
   ctx.beginPath();
-  ctx.moveTo(x + w*0.1, y);
-  ctx.lineTo(x, y - h);
-  ctx.lineTo(x + w, y);
-  ctx.fillStyle = lighten(col, 0.3);
+  ctx.arc(x, y-48*sc+bob, fr, 0, Math.PI*2);
+  ctx.fillStyle = g;
   ctx.fill();
-  // glow
-  ctx.shadowColor = col;
-  ctx.shadowBlur = 8;
+  // Small secondary cluster to right
   ctx.beginPath();
-  ctx.arc(x, y - h + 4, 3*sc, 0, Math.PI*2);
-  ctx.fillStyle = '#fff';
+  ctx.arc(x+fr*0.7, y-36*sc+bob, fr*0.55, 0, Math.PI*2);
+  ctx.fillStyle = colDark;
   ctx.fill();
-  ctx.shadowBlur = 0;
-}
-
-// --- Cactus ---
-function drawCactus(x, y, sc, col) {
-  const tw = 6*sc, th = 32*sc;
-  ctx.fillStyle = col;
-  // trunk
-  ctx.fillRect(x - tw/2, y - th, tw, th);
-  // arms
-  ctx.fillRect(x - tw/2 - tw*2, y - th*0.65, tw*2, tw*0.8);
-  ctx.fillRect(x + tw/2, y - th*0.75, tw*2, tw*0.8);
-  // tops
-  ctx.beginPath(); ctx.arc(x, y - th, tw*0.6, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x - tw*2 - tw/2, y - th*0.65, tw*0.5, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x + tw*2 + tw/2, y - th*0.75, tw*0.5, 0, Math.PI*2); ctx.fill();
-}
-
-// --- Palm tree ---
-function drawPalm(x, y, sc, col, col2) {
-  const th = 36*sc;
-  // curved trunk
-  ctx.strokeStyle = darken(P.gold, 0.2);
-  ctx.lineWidth = 5*sc;
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.quadraticCurveTo(x + 8*sc, y - th*0.5, x + 4*sc, y - th);
-  ctx.stroke();
-  // fronds — pom-pom style
-  const fx = x + 4*sc, fy = y - th;
-  const r = 18*sc;
-  [[-1.1,-0.5],[0,-1],[1,-0.6],[1.3,0.2],[-1.2,0.1]].forEach(([dx,dy])=>{
-    ctx.beginPath();
-    ctx.ellipse(fx + dx*r, fy + dy*r*0.6, r*0.5, r*0.3, Math.atan2(dy,dx), 0, Math.PI*2);
-    ctx.fillStyle = col;
-    ctx.fill();
-  });
-}
-
-// --- Mushroom ---
-function drawMushroom(x, y, sc, col) {
-  const sw = 5*sc, sh = 14*sc;
-  ctx.fillStyle = P.cream;
-  ctx.fillRect(x - sw/2, y - sh, sw, sh);
-  ctx.beginPath();
-  ctx.arc(x, y - sh, 14*sc, Math.PI, 0);
+  ctx.arc(x+fr*0.65, y-38*sc+bob, fr*0.5, 0, Math.PI*2);
   ctx.fillStyle = col;
   ctx.fill();
-  // spots
-  ctx.fillStyle = P.cream;
-  [[0,-5],[6,-2],[-5,-1]].forEach(([dx,dy])=>{
-    ctx.beginPath();
-    ctx.arc(x+dx*sc, y-sh+dy*sc, 2.5*sc, 0, Math.PI*2);
-    ctx.fill();
-  });
 }
 
-// --- Coral ---
-function drawCoral(x, y, sc, col) {
-  ctx.fillStyle = col;
-  [[-6,0,4,20],[0,0,5,26],[6,0,4,18]].forEach(([dx,,w,h])=>{
-    ctx.beginPath();
-    ctx.ellipse(x+dx*sc, y-h/2*sc, w/2*sc, h/2*sc, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x+dx*sc, y-h*sc, w/2*sc, 0, Math.PI*2);
-    ctx.fillStyle = lighten(col,0.3);
-    ctx.fill();
-    ctx.fillStyle = col;
-  });
-}
-
-// ============================================================
-// DRAW CRYSTAL
-// ============================================================
-function drawCrystal(cx, t) {
-  if (cx.collected) return;
-  const {x, y} = isoProject(cx.col + 0.5, cx.row + 0.5, 0);
-  const bob = Math.sin(t * 2.2 + cx.phase) * 5;
-  const spin = t * 1.5 + cx.phase;
-  const py = y - TILE_DEPTH - 18 + bob;
-
-  // Aura glow ring
-  ctx.save();
-  const grd = ctx.createRadialGradient(x, py, 2, x, py, 24);
-  grd.addColorStop(0, hexAlpha(P.lavender, 0.55));
-  grd.addColorStop(1, hexAlpha(P.lavender, 0));
-  ctx.fillStyle = grd;
-  ctx.beginPath();
-  ctx.arc(x, py, 24, 0, Math.PI*2);
-  ctx.fill();
-
-  // Spinning outer ring
-  ctx.strokeStyle = hexAlpha(P.lavender, 0.5);
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < 6; i++) {
-    const a = spin + (i / 6) * Math.PI * 2;
-    const rx = x + Math.cos(a) * 14;
-    const ry = py + Math.sin(a) * 6;
-    ctx.beginPath();
-    ctx.arc(rx, ry, 2, 0, Math.PI * 2);
-    ctx.fillStyle = P.lavender;
-    ctx.fill();
-  }
-
-  // Crystal gem body (octahedron drawn as 2D diamond)
-  const gs = 11;
-  ctx.save();
-  ctx.translate(x, py);
-  ctx.rotate(Math.sin(spin * 0.5) * 0.2);
-
-  // back faces (darker)
-  ctx.beginPath();
-  ctx.moveTo(0, -gs);
-  ctx.lineTo(gs, 0);
-  ctx.lineTo(0, gs);
-  ctx.closePath();
-  ctx.fillStyle = darken(P.lavender, 0.2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(0, -gs);
-  ctx.lineTo(-gs, 0);
-  ctx.lineTo(0, gs);
-  ctx.closePath();
-  ctx.fillStyle = P.lavender;
-  ctx.fill();
-
-  // bright highlight facet
-  ctx.beginPath();
-  ctx.moveTo(-gs*0.4, -gs*0.6);
-  ctx.lineTo(0, -gs);
-  ctx.lineTo(-gs*0.7, -gs*0.15);
-  ctx.closePath();
-  ctx.fillStyle = lighten(P.lavender, 0.5);
-  ctx.fill();
-
-  // white sparkle
-  ctx.shadowColor = P.lavender;
-  ctx.shadowBlur = 14;
-  ctx.beginPath();
-  ctx.arc(-gs*0.25, -gs*0.3, 2.5, 0, Math.PI*2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.restore();
-  ctx.restore();
-}
-
-// ============================================================
-// SPAWN CRYSTALS
-// ============================================================
-function spawnCrystals(islandIdx) {
-  crystals = [];
-  crystalsCollected = 0;
-
-  // Find valid interior tiles
-  const valid = [];
-  for (let r = 1; r < GRID_ROWS-1; r++) {
-    for (let c = 1; c < GRID_COLS-1; c++) {
-      if (ISLAND_SHAPE[r][c] && !(r===4 && c===4)) {
-        valid.push({col:c, row:r});
-      }
+// ============= FLOWERS & PETALS =============
+function drawFlowerPatch(x, y, sc, col) {
+  for (let i=0;i<5;i++) {
+    const fx = x + (i%3-1)*14*sc + Math.sin(i*2.1)*8*sc;
+    const fy = y + (Math.floor(i/3))*10*sc + Math.cos(i*1.7)*5*sc;
+    // Petals
+    for (let p=0;p<5;p++) {
+      const a = p/5*Math.PI*2;
+      ctx.beginPath();
+      ctx.ellipse(fx+Math.cos(a)*5*sc, fy+Math.sin(a)*5*sc, 4*sc, 2.5*sc, a, 0, Math.PI*2);
+      ctx.fillStyle = col;
+      ctx.fill();
     }
-  }
-  // Shuffle
-  for (let i = valid.length-1; i > 0; i--) {
-    const j = Math.floor(Math.random()*(i+1));
-    [valid[i],valid[j]] = [valid[j],valid[i]];
-  }
-
-  for (let i = 0; i < CRYSTALS_PER_ISLAND; i++) {
-    const t = valid[i];
-    crystals.push({
-      col: t.col, row: t.row,
-      phase: (i/CRYSTALS_PER_ISLAND)*Math.PI*2,
-      collected: false,
-      collectAnim: 0
-    });
+    ctx.beginPath(); ctx.arc(fx, fy, 3*sc, 0, Math.PI*2);
+    ctx.fillStyle = P.gold; ctx.fill();
+    // stem
+    ctx.strokeStyle = rgba(P.moss, 0.7); ctx.lineWidth = 1.5*sc;
+    ctx.beginPath(); ctx.moveTo(fx, fy+3*sc); ctx.lineTo(fx, fy+10*sc); ctx.stroke();
   }
 }
 
-// ============================================================
-// DRAW CHIBI PLAYER
-// ============================================================
-function drawPlayer(t) {
-  const {x, y} = isoProject(player.col, player.row, 0);
-  const bob = Math.sin(player.bobT * 3) * 2.5;
-  const px = x;
-  const py = y - TILE_DEPTH + bob;
+function drawScatteredPetals(isl) {
+  // Petals along path
+  const petals = [
+    [0.44,0.88],[0.50,0.80],[0.47,0.73],[0.52,0.67],
+    [0.39,0.60],[0.55,0.55],[0.43,0.50]
+  ];
+  petals.forEach(([rx,ry],i)=>{
+    const sc=depthScale(ry-0.18)*0.5;
+    ctx.save();
+    ctx.translate(rx*W, ry*H);
+    ctx.rotate(i*0.8);
+    ctx.beginPath();
+    ctx.ellipse(0,0,6*sc,3*sc,0,0,Math.PI*2);
+    ctx.fillStyle = rgba(isl.accent, 0.75);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+
+// ============= CHIBI CHARACTER =============
+function drawCharacter(t) {
+  const {sx, sy} = ws(player.wx, player.wy);
+  const sc = depthScale(player.wy - 0.18) * 1.1;
+  const bob = Math.sin(player.bobT * 3.5) * 2.5 * sc;
+  const facing = player.facing;
+  const scarfWave = Math.sin(t * 3.5 + 0.5) * 6 * sc;
 
   ctx.save();
-  ctx.translate(px, py);
+  ctx.translate(sx, sy + bob);
+  ctx.scale(facing, 1);
+
+  // Ground shadow
+  ctx.beginPath();
+  ctx.ellipse(0, 2*sc, 16*sc, 5*sc, 0, 0, Math.PI*2);
+  ctx.fillStyle = rgba(P.plum, 0.18);
+  ctx.fill();
+
+  // --- LEGS (small, simple) ---
+  const lSwing = Math.sin(player.stepT * 7) * 5 * sc;
+  ctx.fillStyle = darken(P.plum, 0.1);
+  // Left leg
+  ctx.beginPath();
+  ctx.roundRect(-7*sc, -6*sc + lSwing*0.5, 5*sc, 10*sc, 2*sc);
+  ctx.fill();
+  // Right leg
+  ctx.beginPath();
+  ctx.roundRect(2*sc, -6*sc - lSwing*0.5, 5*sc, 10*sc, 2*sc);
+  ctx.fill();
+  // Shoes - small dark ovals
+  ctx.fillStyle = P.plum;
+  ctx.beginPath(); ctx.ellipse(-4*sc, 4*sc + lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4*sc, 4*sc - lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+
+  // --- BODY (simple white/cream dress shape) ---
+  ctx.beginPath();
+  ctx.moveTo(-9*sc, -8*sc);
+  ctx.lineTo(-11*sc, -5*sc);
+  ctx.lineTo(-10*sc, 2*sc);
+  ctx.lineTo(10*sc, 2*sc);
+  ctx.lineTo(11*sc, -5*sc);
+  ctx.lineTo(9*sc, -8*sc);
+  ctx.lineTo(0, -22*sc);
+  ctx.closePath();
+  ctx.fillStyle = P.cream;
+  ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.25);
+  ctx.lineWidth = 0.8*sc;
+  ctx.stroke();
+
+  // Arms
+  ctx.strokeStyle = P.cream;
+  ctx.lineWidth = 3.5*sc;
+  ctx.lineCap = 'round';
+  // Left arm hangs, right arm slightly raised
+  ctx.beginPath();
+  ctx.moveTo(-9*sc, -14*sc);
+  ctx.quadraticCurveTo(-16*sc, -10*sc, -14*sc, -2*sc);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(9*sc, -14*sc);
+  ctx.quadraticCurveTo(17*sc, -9*sc, 15*sc, -3*sc);
+  ctx.stroke();
+
+  // --- SCARF (flowing, red/coral, very visible) ---
+  ctx.save();
+  // Main scarf wrap at neck
+  ctx.fillStyle = P.coral;
+  ctx.beginPath();
+  ctx.ellipse(0, -20*sc, 10*sc, 4*sc, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Scarf tail flowing behind (wind effect)
+  ctx.beginPath();
+  ctx.moveTo(7*sc, -22*sc);
+  ctx.quadraticCurveTo(20*sc + scarfWave, -18*sc, 24*sc + scarfWave*0.7, -10*sc);
+  ctx.quadraticCurveTo(22*sc + scarfWave, -5*sc, 18*sc + scarfWave*0.5, -8*sc);
+  ctx.quadraticCurveTo(16*sc, -14*sc, 7*sc, -18*sc);
+  ctx.closePath();
+  ctx.fillStyle = P.coral;
+  ctx.fill();
+  // Scarf highlight
+  ctx.beginPath();
+  ctx.moveTo(8*sc, -22*sc);
+  ctx.quadraticCurveTo(18*sc + scarfWave, -19*sc, 20*sc + scarfWave*0.7, -12*sc);
+  ctx.strokeStyle = lighten(P.coral, 0.3);
+  ctx.lineWidth = 1.5*sc;
+  ctx.stroke();
+  ctx.restore();
+
+  // --- HEAD (large chibi circle) ---
+  const headR = 18*sc;
+  const headY = -38*sc;
+  // Head shadow/back
+  ctx.beginPath();
+  ctx.arc(2*sc, headY+2*sc, headR, 0, Math.PI*2);
+  ctx.fillStyle = rgba(P.plum, 0.1);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, headY, headR, 0, Math.PI*2);
+  ctx.fillStyle = '#F5E6D0';
+  ctx.fill();
+  ctx.strokeStyle = rgba(P.plum, 0.2);
+  ctx.lineWidth = 0.8*sc;
+  ctx.stroke();
+
+  // --- HAIR (dark brown, soft) ---
+  ctx.fillStyle = '#5C3A1E';
+  // Back hair
+  ctx.beginPath();
+  ctx.arc(0, headY, headR*1.05, Math.PI*0.85, Math.PI*2.15);
+  ctx.fill();
+  // Top tuft
+  ctx.beginPath();
+  ctx.ellipse(0, headY - headR*0.9, headR*0.75, headR*0.5, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Side bangs
+  ctx.beginPath();
+  ctx.ellipse(-headR*0.7, headY - headR*0.1, headR*0.3, headR*0.55, -0.3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(headR*0.7, headY - headR*0.1, headR*0.3, headR*0.55, 0.3, 0, Math.PI*2);
+  ctx.fill();
+  // Hair flowing behind (wind)
+  ctx.beginPath();
+  ctx.moveTo(facing*headR*0.7, headY+headR*0.3);
+  ctx.quadraticCurveTo(facing*headR*1.4, headY+headR*0.8, facing*headR*1.8, headY+headR*1.5);
+  ctx.quadraticCurveTo(facing*headR*1.6, headY+headR*1.8, facing*headR*1.2, headY+headR*1.2);
+  ctx.quadraticCurveTo(facing*headR*1.0, headY+headR*0.7, facing*headR*0.5, headY+headR*0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // --- FACE ---
+  // Eyes (large, expressive dot eyes)
+  ctx.fillStyle = '#2A1A0E';
+  ctx.beginPath(); ctx.ellipse(-6*sc, headY-2*sc, 4*sc, 4.5*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6*sc, headY-2*sc, 4*sc, 4.5*sc, 0, 0, Math.PI*2); ctx.fill();
+  // Eye shine
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-5*sc, headY-3.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7*sc, headY-3.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+  // Rosy cheeks
+  ctx.fillStyle = rgba(P.coral, 0.28);
+  ctx.beginPath(); ctx.ellipse(-10*sc, headY+2*sc, 6*sc, 3.5*sc, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10*sc, headY+2*sc, 6*sc, 3.5*sc, 0.2, 0, Math.PI*2); ctx.fill();
+  // Tiny smile
+  ctx.strokeStyle = rgba('#5C3A1E', 0.6);
+  ctx.lineWidth = 1.2*sc;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(0, headY+3*sc, 4*sc, 0.1, Math.PI-0.1);
+  ctx.stroke();
 
   // collect flash
   if (player.collectAnim > 0) {
     ctx.save();
-    ctx.globalAlpha = player.collectAnim;
-    ctx.fillStyle = P.gold;
-    ctx.beginPath();
-    ctx.arc(0, -28, 22, 0, Math.PI*2);
-    ctx.fill();
+    ctx.globalAlpha = player.collectAnim * 0.6;
+    const cg = ctx.createRadialGradient(0, headY-20*sc, 0, 0, headY-20*sc, 30*sc);
+    cg.addColorStop(0, P.gold); cg.addColorStop(1, rgba(P.gold, 0));
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(0, headY-20*sc, 30*sc, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
 
-  const facing = player.facing;
-  ctx.scale(facing, 1);
-
-  // --- BODY (small rect/oval) ---
-  ctx.beginPath();
-  ctx.ellipse(0, -16, 9, 11, 0, 0, Math.PI*2);
-  ctx.fillStyle = P.cream;
-  ctx.fill();
-  ctx.strokeStyle = P.plum;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // --- LEGS (two small rectangles, animated) ---
-  const lSwing = Math.sin(player.stepT * 6) * 4;
-  ctx.fillStyle = P.plum;
-  ctx.beginPath();
-  ctx.roundRect(-5, -7 + lSwing, 4, 9, 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.roundRect(1, -7 - lSwing, 4, 9, 2);
-  ctx.fill();
-  // feet
-  ctx.fillStyle = P.plum;
-  ctx.beginPath(); ctx.ellipse(-3, 2 + lSwing, 4, 2.5, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(3, 2 - lSwing, 4, 2.5, 0, 0, Math.PI*2); ctx.fill();
-
-  // --- SCARF (very visible coral band at neck) ---
-  ctx.beginPath();
-  ctx.ellipse(0, -25, 10, 4, 0, 0, Math.PI*2);
-  ctx.fillStyle = P.coral;
-  ctx.fill();
-  // scarf tail
-  ctx.beginPath();
-  ctx.moveTo(6, -24);
-  ctx.quadraticCurveTo(14, -20, 10, -14);
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = P.coral;
-  ctx.stroke();
-
-  // --- BIG HEAD (oversized chibi circle) ---
-  const headR = 17;
-  ctx.beginPath();
-  ctx.arc(0, -40, headR, 0, Math.PI*2);
-  ctx.fillStyle = P.cream;
-  ctx.fill();
-  ctx.strokeStyle = P.plum;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // --- HAIR (pink tuft on top) ---
-  ctx.fillStyle = P.pink;
-  ctx.beginPath();
-  ctx.arc(-4, -53, 8, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(4, -55, 7, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, -56, 6, 0, Math.PI*2);
-  ctx.fill();
-
-  // --- EYES (large dot eyes) ---
-  ctx.fillStyle = P.plum;
-  ctx.beginPath(); ctx.arc(-6, -41, 3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(5, -41, 3, 0, Math.PI*2); ctx.fill();
-  // eye shine
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(-5, -42, 1, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(6, -42, 1, 0, Math.PI*2); ctx.fill();
-
-  // --- ROSY CHEEKS ---
-  ctx.fillStyle = hexAlpha(P.coral, 0.35);
-  ctx.beginPath(); ctx.ellipse(-9, -38, 5, 3, -0.3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(9, -38, 5, 3, 0.3, 0, Math.PI*2); ctx.fill();
-
-  // --- LANTERN (held to side) ---
-  // arm
-  ctx.strokeStyle = P.cream;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(9, -22);
-  ctx.lineTo(16, -18);
-  ctx.stroke();
-  // lantern body
-  ctx.fillStyle = P.gold;
-  ctx.beginPath();
-  ctx.roundRect(13, -24, 8, 12, 3);
-  ctx.fill();
-  ctx.strokeStyle = P.plum;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // lantern glow
-  ctx.save();
-  ctx.globalAlpha = 0.5 + Math.sin(t*3)*0.15;
-  const lg = ctx.createRadialGradient(17, -18, 0, 17, -18, 16);
-  lg.addColorStop(0, hexAlpha(P.gold, 0.7));
-  lg.addColorStop(1, hexAlpha(P.gold, 0));
-  ctx.fillStyle = lg;
-  ctx.beginPath(); ctx.arc(17, -18, 16, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-  // lantern window
-  ctx.fillStyle = lighten(P.gold, 0.4);
-  ctx.beginPath();
-  ctx.roundRect(15, -22, 4, 7, 1);
-  ctx.fill();
-
-  ctx.restore(); // facing scale
-  ctx.restore(); // translate
+  ctx.restore(); // main translate+scale
 }
 
 
-// ============================================================
-// PARTICLES
-// ============================================================
-function spawnBurst(col, row, color, count) {
-  const {x, y} = isoProject(col + 0.5, row + 0.5, 0);
-  for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const spd = 1.5 + Math.random() * 3;
-    particles.push({
-      x, y: y - TILE_DEPTH - 14,
-      vx: Math.cos(a) * spd,
-      vy: Math.sin(a) * spd - 2,
-      life: 1.0,
-      decay: 0.025 + Math.random() * 0.02,
-      r: 3 + Math.random() * 4,
-      color
-    });
+// ============= CRYSTAL =============
+function drawCrystal(cx, t) {
+  if (cx.collected) return;
+  const {sx, sy} = ws(cx.wx, cx.wy);
+  const sc = depthScale(cx.wy - 0.18) * 0.9;
+  const bob = Math.sin(t*2.2 + cx.phase) * 5 * sc;
+  const py = sy - 22*sc + bob;
+
+  ctx.save();
+  // Aura
+  const ag = ctx.createRadialGradient(sx, py, 2, sx, py, 26*sc);
+  ag.addColorStop(0, rgba(P.lavender, 0.55));
+  ag.addColorStop(1, rgba(P.lavender, 0));
+  ctx.fillStyle = ag;
+  ctx.beginPath(); ctx.arc(sx, py, 26*sc, 0, Math.PI*2); ctx.fill();
+
+  // Orbiting dots
+  for (let i=0;i<5;i++) {
+    const a = t*1.8 + (i/5)*Math.PI*2 + cx.phase;
+    ctx.beginPath();
+    ctx.arc(sx+Math.cos(a)*14*sc, py+Math.sin(a)*6*sc, 2*sc, 0, Math.PI*2);
+    ctx.fillStyle = P.lavender; ctx.fill();
+  }
+
+  // Crystal body
+  ctx.save();
+  ctx.translate(sx, py);
+  ctx.rotate(Math.sin(t*0.6+cx.phase)*0.18);
+  const gs = 12*sc;
+  ctx.beginPath();
+  ctx.moveTo(0,-gs*1.1); ctx.lineTo(gs,0); ctx.lineTo(0,gs*0.8); ctx.lineTo(-gs,0);
+  ctx.closePath();
+  ctx.fillStyle = P.lavender; ctx.fill();
+  // Dark right facet
+  ctx.beginPath();
+  ctx.moveTo(0,-gs*1.1); ctx.lineTo(gs,0); ctx.lineTo(0,gs*0.8);
+  ctx.fillStyle = darken(P.lavender, 0.25); ctx.fill();
+  // Bright highlight
+  ctx.beginPath();
+  ctx.moveTo(-gs*0.5,-gs*0.8); ctx.lineTo(0,-gs*1.1); ctx.lineTo(-gs*0.8,-gs*0.1);
+  ctx.fillStyle = lighten(P.lavender, 0.45); ctx.fill();
+  // Sparkle
+  ctx.shadowColor = P.lavender; ctx.shadowBlur = 12;
+  ctx.beginPath(); ctx.arc(-gs*0.3,-gs*0.5,2*sc,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.restore();
+  ctx.restore();
+}
+
+// ============= PARTICLES =============
+function spawnBurst(wx, wy, count) {
+  const {sx,sy} = ws(wx,wy);
+  const sc = depthScale(wy-0.18);
+  for (let i=0;i<count;i++) {
+    const a=Math.random()*Math.PI*2, spd=1.5+Math.random()*3;
+    particles.push({x:sx,y:sy-20*sc,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-2,
+      life:1,decay:0.022+Math.random()*0.015,r:3+Math.random()*4,
+      col:[P.lavender,P.gold,P.pink][Math.floor(Math.random()*3)]});
   }
 }
 
-function spawnStarBurst(col, row) {
-  spawnBurst(col, row, P.lavender, 10);
-  spawnBurst(col, row, P.gold,    6);
-  spawnBurst(col, row, P.pink,    5);
-}
-
 function updateParticles(dt) {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx * dt * 60;
-    p.y += p.vy * dt * 60;
-    p.vy += 0.06 * dt * 60;
-    p.life -= p.decay * dt * 60;
-    if (p.life <= 0) particles.splice(i, 1);
+  for (let i=particles.length-1;i>=0;i--) {
+    const p=particles[i];
+    p.x+=p.vx*dt*60; p.y+=p.vy*dt*60; p.vy+=0.07*dt*60;
+    p.life-=p.decay*dt*60;
+    if(p.life<=0) particles.splice(i,1);
   }
 }
 
 function drawParticles() {
-  particles.forEach(p => {
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, p.life);
-    // star shape
-    ctx.fillStyle = p.color;
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.life * 5);
+  particles.forEach(p=>{
+    ctx.save(); ctx.globalAlpha=Math.max(0,p.life);
+    ctx.translate(p.x,p.y); ctx.rotate(p.life*5);
+    ctx.fillStyle=p.col;
     ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      const ai = a + Math.PI / 5;
-      const ro = p.r, ri = p.r * 0.4;
-      if (i === 0) ctx.moveTo(Math.cos(a)*ro, Math.sin(a)*ro);
-      else ctx.lineTo(Math.cos(a)*ro, Math.sin(a)*ro);
-      ctx.lineTo(Math.cos(ai)*ri, Math.sin(ai)*ri);
+    for(let i=0;i<5;i++){
+      const a=(i/5)*Math.PI*2-Math.PI/2, ai=a+Math.PI/5;
+      const ro=p.r,ri=p.r*0.4;
+      i===0?ctx.moveTo(Math.cos(a)*ro,Math.sin(a)*ro):ctx.lineTo(Math.cos(a)*ro,Math.sin(a)*ro);
+      ctx.lineTo(Math.cos(ai)*ri,Math.sin(ai)*ri);
     }
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   });
 }
 
-// ============================================================
-// RENDER ISLAND
-// ============================================================
-function renderIsland(t) {
-  const island = ISLANDS[currentIsland];
-
-  // Draw sky
-  drawSky(island);
-
-  // Draw clouds
-  clouds.forEach(c => drawCloud(c.x, c.y, c.scale, c.alpha));
-
-  // Compute draw order: sort tiles back-to-front (painter's algorithm)
-  // In iso: render from top-left to bottom-right
-  const tileOrder = [];
-  for (let r = 0; r < GRID_ROWS; r++) {
-    for (let c = 0; c < GRID_COLS; c++) {
-      if (ISLAND_SHAPE[r][c]) {
-        tileOrder.push({r, c, depth: r + c});
-      }
-    }
-  }
-  tileOrder.sort((a,b) => a.depth - b.depth || a.r - b.r);
-
-  // For each tile, gather what needs to be drawn on it
-  const tileContents = {}; // key -> {crystal, decor, hasPlayer}
-  crystals.forEach((cx, i) => {
-    if (!cx.collected) {
-      const k = `${cx.row},${cx.col}`;
-      if (!tileContents[k]) tileContents[k] = {};
-      tileContents[k].crystal = cx;
-    }
+// ============= CLOUDS =============
+function initClouds() {
+  clouds=[];
+  for(let i=0;i<4;i++) clouds.push({x:Math.random()*W,y:30+Math.random()*H*0.22,
+    speed:0.1+Math.random()*0.15,sc:0.7+Math.random()*0.7,alpha:0.5+Math.random()*0.3});
+}
+function drawClouds(isl) {
+  clouds.forEach(c=>{
+    ctx.save(); ctx.globalAlpha=c.alpha;
+    ctx.fillStyle=lighten(isl.skyBot, 0.3);
+    const r=20*c.sc;
+    [[-r*0.9,-r*0.4,0.7],[0,0,1],[r*0.9,-r*0.35,0.75],[r*1.7,r*0.05,0.58],[-r*1.6,r*0.05,0.55]].forEach(([dx,dy,s])=>{
+      ctx.beginPath(); ctx.arc(c.x+dx,c.y+dy,r*s,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
   });
-  decorations.forEach(d => {
-    const k = `${d.row},${d.col}`;
-    if (!tileContents[k]) tileContents[k] = {};
-    tileContents[k].decor = d;
-  });
-  const playerTileR = Math.round(player.row);
-  const playerTileC = Math.round(player.col);
-  const pKey = `${playerTileR},${playerTileC}`;
+}
+function updateClouds(dt){clouds.forEach(c=>{c.x+=c.speed*dt*60*0.016;if(c.x>W+150)c.x=-150;});}
 
-  // Draw tiles + contents
-  tileOrder.forEach(({r, c, depth}) => {
-    const k = `${r},${c}`;
-    const isCenter = (r === 4 && c === 4);
-    // Slightly lighter top for center tile
-    const topCol = isCenter ? lighten(island.ground, 0.12) : island.ground;
-    const leftCol = island.groundSide;
-    const rightCol = darken(island.groundSide, 0.15);
+// ============= SCENE OBJECTS =============
+function buildScene(islandIdx) {
+  const isl = ISLANDS[islandIdx];
+  decorations = [];
 
-    drawTile(c, r, topCol, leftCol, rightCol, isCenter);
-
-    // Draw content on this tile AFTER tile is drawn
-    const tc = tileContents[k];
-    if (tc) {
-      if (tc.decor) drawDecoration(tc.decor, t);
-      if (tc.crystal) drawCrystal(tc.crystal, t);
-    }
-
-    // Draw player after its tile
-    if (k === pKey) {
-      drawPlayer(t);
-    }
+  // Trees - left cluster, right cluster, far back
+  const treeDefs = [
+    // [wx, wy, scale_mult, col_variant]
+    [0.08, 0.46, 1.1, 0], [0.14, 0.52, 1.25, 1], [0.10, 0.58, 1.0, 0],
+    [0.82, 0.44, 1.05, 1], [0.88, 0.50, 1.2, 0], [0.84, 0.57, 0.95, 1],
+    [0.25, 0.40, 0.85, 0], [0.65, 0.38, 0.8, 1],
+    [0.35, 0.36, 0.7, 0], [0.58, 0.34, 0.72, 1]
+  ];
+  treeDefs.forEach(([wx,wy,sm,cv],i)=>{
+    decorations.push({type:'tree',wx,wy,sm,col:cv===0?isl.treeCol:darken(isl.treeCol,0.12),
+      colDark:isl.treeDark,phase:i*0.9});
   });
 
-  // Draw particles on top
+  // Rocks scattered
+  const rockDefs = [[0.22,0.60,1.1],[0.30,0.68,0.85],[0.68,0.62,1.0],[0.76,0.70,0.9],
+    [0.18,0.72,0.75],[0.72,0.55,0.8],[0.42,0.42,0.65]];
+  rockDefs.forEach(([wx,wy,sm])=>{
+    decorations.push({type:'rock',wx,wy,sm,col:isl.rockCol,phase:0});
+  });
+
+  // Flower patches
+  const flowerDefs=[[0.30,0.74,0.9],[0.62,0.72,0.85],[0.40,0.55,0.7],[0.58,0.58,0.75]];
+  flowerDefs.forEach(([wx,wy,sm])=>{
+    decorations.push({type:'flowers',wx,wy,sm,col:isl.accent,phase:0});
+  });
+
+  // Sort back-to-front by wy
+  decorations.sort((a,b)=>a.wy-b.wy);
+}
+
+function spawnCrystals(islandIdx) {
+  crystals=[]; crystalsCollected=0;
+  const positions=[
+    [0.25,0.55],[0.70,0.52],[0.38,0.70],[0.60,0.68],[0.50,0.44]
+  ];
+  // Shuffle
+  for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
+  positions.forEach(([wx,wy],i)=>{
+    crystals.push({wx,wy,phase:(i/5)*Math.PI*2,collected:false});
+  });
+}
+
+let crystalsCollected = 0;
+
+
+// ============= RENDER SCENE =============
+function renderScene(t) {
+  const isl = ISLANDS[currentIsland];
+  ctx.clearRect(0,0,W,H);
+
+  drawSky(isl);
+  drawClouds(isl);
+  drawGround(isl);
+  drawPools(isl);
+  drawPath(isl);
+  drawScatteredPetals(isl);
+
+  // Draw decorations + crystals + player sorted back-to-front
+  // Build a combined draw list
+  const drawList = [];
+
+  decorations.forEach(d => drawList.push({wy:d.wy, fn:()=>drawDecor(d,t)}));
+  crystals.forEach(cx => { if(!cx.collected) drawList.push({wy:cx.wy, fn:()=>drawCrystal(cx,t)}); });
+  drawList.push({wy:player.wy, fn:()=>drawCharacter(t)});
+
+  drawList.sort((a,b)=>a.wy-b.wy);
+  drawList.forEach(item=>item.fn());
+
   drawParticles();
-
-  // Water border shimmer (decorative)
-  drawWaterBorder(t);
 }
 
-// ============================================================
-// WATER BORDER
-// ============================================================
-function drawWaterBorder(t) {
-  // Draw water tiles just outside island for effect
-  const island = ISLANDS[currentIsland];
-  const waterColor = darken(island.sky[1], 0.15);
-  const shimmer = hexAlpha(P.cream, 0.12 + Math.sin(t*1.5)*0.06);
-
-  for (let r = -1; r <= GRID_ROWS; r++) {
-    for (let c = -1; c <= GRID_COLS; c++) {
-      if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS || !ISLAND_SHAPE[r]?.[c]) {
-        // Only draw water tiles adjacent to land
-        let adj = false;
-        for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-          const nr=r+dr, nc=c+dc;
-          if (nr>=0&&nr<GRID_ROWS&&nc>=0&&nc<GRID_COLS&&ISLAND_SHAPE[nr][nc]) { adj=true; break; }
-        }
-        if (!adj) continue;
-        const x = offX + (c - r) * (TILE_W / 2);
-        const y = offY + (c + r) * (TILE_H / 2);
-        const hw = TILE_W/2, hh = TILE_H/2;
-        ctx.beginPath();
-        ctx.moveTo(x,      y-hh);
-        ctx.lineTo(x+hw,   y);
-        ctx.lineTo(x,      y+hh);
-        ctx.lineTo(x-hw,   y);
-        ctx.closePath();
-        ctx.fillStyle = waterColor;
-        ctx.fill();
-        ctx.fillStyle = shimmer;
-        ctx.fill();
-      }
-    }
-  }
+function drawDecor(d, t) {
+  const {sx,sy} = ws(d.wx,d.wy);
+  const sc = depthScale(d.wy-0.18)*d.sm;
+  if (d.type==='tree') drawTree(sx,sy,sc,d.col,d.colDark,t,d.phase);
+  else if (d.type==='rock') drawRock(sx,sy,sc,d.col);
+  else if (d.type==='flowers') drawFlowerPatch(sx,sy,sc,d.col);
 }
 
-// ============================================================
-// PLAYER MOVEMENT
-// ============================================================
+// ============= PLAYER MOVEMENT =============
 function updatePlayer(dt) {
-  let dx = 0, dy = 0;
+  let dx=0,dy=0;
+  if(keys['ArrowUp']   ||keys['w']||keys['W']) dy=-1;
+  if(keys['ArrowDown'] ||keys['s']||keys['S']) dy= 1;
+  if(keys['ArrowLeft'] ||keys['a']||keys['A']) dx=-1;
+  if(keys['ArrowRight']||keys['d']||keys['D']) dx= 1;
+  if(joyVec.x||joyVec.y){dx=joyVec.x;dy=joyVec.y;}
+  if(dx&&dy){dx*=0.707;dy*=0.707;}
 
-  // Keyboard
-  if (keys['ArrowUp']    || keys['w'] || keys['W']) dy = -1;
-  if (keys['ArrowDown']  || keys['s'] || keys['S']) dy =  1;
-  if (keys['ArrowLeft']  || keys['a'] || keys['A']) dx = -1;
-  if (keys['ArrowRight'] || keys['d'] || keys['D']) dx =  1;
-
-  // Joystick
-  if (joyVec.x !== 0 || joyVec.y !== 0) {
-    dx = joyVec.x;
-    dy = joyVec.y;
+  const spd=0.45;
+  if(dx||dy){
+    player.stepT+=dt;
+    if(dx>0.1) player.facing=1;
+    if(dx<-0.1) player.facing=-1;
   }
 
-  // Diagonal normalize
-  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
-
-  // Iso movement: keyboard maps to iso axes
-  // Up = col-1,row-1 / Down = col+1,row+1 / Left = col-1,row+1 / Right = col+1,row-1
-  const speed = 4.2;
-  let dCol = (dx - dy) * speed * dt;
-  let dRow = (dx + dy) * speed * dt;
-
-  // Actually: WASD moves in iso-world directions
-  // Let's map: up/down = row--, row++; left/right = col--, col++
-  dCol = dx * speed * dt;
-  dRow = dy * speed * dt;
-
-  if (dCol !== 0 || dRow !== 0) {
-    player.stepT += dt;
-    if (dCol > 0) player.facing = 1;
-    if (dCol < 0) player.facing = -1;
-  }
-
-  // Try movement
-  const newCol = player.col + dCol;
-  const newRow = player.row + dRow;
-
-  const rc = Math.round(newRow);
-  const cc = Math.round(newCol);
-
-  // Check bounds
-  if (rc >= 0 && rc < GRID_ROWS && cc >= 0 && cc < GRID_COLS && ISLAND_SHAPE[rc][cc]) {
-    player.col = Math.max(0.3, Math.min(GRID_COLS - 0.7, newCol));
-    player.row = Math.max(0.3, Math.min(GRID_ROWS - 0.7, newRow));
-  }
-
-  // Bob animation
+  player.wx = Math.max(0.04, Math.min(0.96, player.wx + dx*spd*dt));
+  player.wy = Math.max(0.30, Math.min(0.95, player.wy + dy*spd*dt));
   player.bobT += dt;
+  player.scarfT += dt;
+  if(player.collectAnim>0) player.collectAnim -= dt*3;
 
-  // Collect anim decay
-  if (player.collectAnim > 0) player.collectAnim -= dt * 3;
-
-  // Check crystal collection
-  crystals.forEach(cx => {
-    if (cx.collected) return;
-    const dist = Math.hypot(player.col - (cx.col + 0.5), player.row - (cx.row + 0.5));
-    if (dist < 0.95) {
-      collectCrystal(cx);
-    }
+  // Crystal collection
+  crystals.forEach(cx=>{
+    if(cx.collected) return;
+    const {sx:px,sy:py}=ws(player.wx,player.wy);
+    const {sx:cx2,sy:cy2}=ws(cx.wx,cx.wy);
+    const dist=Math.hypot(px-cx2,py-cy2);
+    const sc=depthScale(player.wy-0.18)*50;
+    if(dist<sc) collectCrystal(cx);
   });
 }
 
 function collectCrystal(cx) {
-  cx.collected = true;
+  cx.collected=true;
   crystalsCollected++;
-  score += 100;
-
-  // Update HUD gems
-  const idx = crystalsCollected - 1;
-  const gem = document.getElementById(`g${idx}`);
-  if (gem) {
-    gem.querySelector('polygon').setAttribute('fill', P.lavender);
-    gem.classList.add('lit');
-  }
-  document.getElementById('score-val').textContent = score;
-
-  // Burst particles
-  spawnStarBurst(cx.col, cx.row);
-
-  // Audio
+  score+=100;
+  const gem=document.getElementById(`g${crystalsCollected-1}`);
+  if(gem){gem.querySelector('polygon').setAttribute('fill',P.lavender);gem.classList.add('lit');}
+  document.getElementById('score-val').textContent=score;
+  spawnBurst(cx.wx,cx.wy,18);
   playCrystalCollect();
-
-  // Flash player
-  player.collectAnim = 1.0;
-
-  // Check island complete
-  if (crystalsCollected >= CRYSTALS_PER_ISLAND) {
-    setTimeout(() => onIslandComplete(), 600);
-  }
+  player.collectAnim=1.0;
+  if(crystalsCollected>=CRYSTALS_PER_ISLAND) setTimeout(onIslandComplete,600);
 }
 
 function onIslandComplete() {
-  islandsCleared[currentIsland] = true;
+  islandsCleared[currentIsland]=true;
   playIslandUnlock();
-
-  if (currentIsland >= ISLANDS.length - 1) {
-    // WIN!
-    setTimeout(() => {
-      gameRunning = false;
-      document.getElementById('win-screen').classList.remove('hidden');
-    }, 800);
+  if(currentIsland>=ISLANDS.length-1){
+    gameRunning=false;
+    setTimeout(()=>document.getElementById('win-screen').classList.remove('hidden'),800);
   } else {
-    showDialogue(
-      `✨ ${ISLANDS[currentIsland].name} cleared!\n\n` +
-      `You collected all 5 crystals! The path to ${ISLANDS[currentIsland+1].name} glows before you.\n\n` +
-      `Open the map (M) to travel onward!`
-    );
+    showDialogue(`✨ ${ISLANDS[currentIsland].name} cleared!\n\nYou collected all 5 crystals! The path to ${ISLANDS[currentIsland+1].name} glows before you.\n\nOpen the map (M) to travel onward!`);
   }
 }
 
-// ============================================================
-// GAME LOOP
-// ============================================================
+// ============= GAME LOOP =============
 function gameLoop(now) {
-  if (!gameRunning) return;
-  animId = requestAnimationFrame(gameLoop);
-
-  const dt = Math.min((now - lastTime) / 1000, 0.05);
-  lastTime = now;
-  const t = now / 1000;
-
-  // Update
-  if (!dialogueOpen) {
-    updatePlayer(dt);
-  }
+  if(!gameRunning) return;
+  animId=requestAnimationFrame(gameLoop);
+  const dt=Math.min((now-lastTime)/1000,0.05);
+  lastTime=now;
+  const t=now/1000;
+  if(!dialogueOpen) updatePlayer(dt);
   updateClouds(dt);
   updateParticles(dt);
-
-  // Draw
-  ctx.clearRect(0, 0, W, H);
-  renderIsland(t);
-
-  // Island label fade
-  // (handled by CSS transition)
+  renderScene(t);
 }
 
-// ============================================================
-// LOAD ISLAND
-// ============================================================
-function loadIsland(idx) {
-  currentIsland = idx;
-  crystalsCollected = 0;
-
-  // Reset HUD gems
-  for (let i = 0; i < 5; i++) {
-    const gem = document.getElementById(`g${i}`);
-    if (gem) {
-      gem.querySelector('polygon').setAttribute('fill', P.lilac);
-      gem.classList.remove('lit');
-    }
-  }
-
-  // Reset player to center
-  player.col = 4;
-  player.row = 4;
-  player.facing = 1;
-  player.bobT = 0;
-  player.collectAnim = 0;
-
-  particles = [];
-
-  // Build decorations + crystals
-  buildDecorations(idx);
-  spawnCrystals(idx);
-  initClouds();
-
-  // Show island label
-  const label = document.getElementById('island-label');
-  label.textContent = ISLANDS[idx].name;
-  label.style.opacity = '1';
-  setTimeout(() => { label.style.opacity = '0'; }, 2500);
-
-  // Show welcome dialogue
-  setTimeout(() => showDialogue(ISLANDS[idx].dialogue), 400);
-}
-
-// ============================================================
-// MAP SCREEN
-// ============================================================
+// ============= MAP =============
 function drawMapCanvas() {
-  const mc = document.getElementById('map-canvas');
-  if (!mc) return;
-  const mctx = mc.getContext('2d');
-  const mw = mc.width, mh = mc.height;
+  const mc=document.getElementById('map-canvas');
+  if(!mc) return;
+  const mctx=mc.getContext('2d');
+  const mw=mc.width,mh=mc.height;
+  const bg=mctx.createLinearGradient(0,0,mw,mh);
+  bg.addColorStop(0,'#F0DEC2'); bg.addColorStop(1,'#EBD5A8');
+  mctx.fillStyle=bg; mctx.fillRect(0,0,mw,mh);
+  const vig=mctx.createRadialGradient(mw/2,mh/2,mh*0.2,mw/2,mh/2,mh*0.8);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(79,66,97,0.18)');
+  mctx.fillStyle=vig; mctx.fillRect(0,0,mw,mh);
+  mctx.strokeStyle=P.plum; mctx.lineWidth=3; mctx.strokeRect(6,6,mw-12,mh-12);
 
-  // Parchment background
-  const bg = mctx.createLinearGradient(0,0,mw,mh);
-  bg.addColorStop(0, '#F0DEC2');
-  bg.addColorStop(1, '#EBD5A8');
-  mctx.fillStyle = bg;
-  mctx.fillRect(0, 0, mw, mh);
-
-  // Vignette
-  const vig = mctx.createRadialGradient(mw/2,mh/2,mh*0.2,mw/2,mh/2,mh*0.8);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(79,66,97,0.18)');
-  mctx.fillStyle = vig;
-  mctx.fillRect(0,0,mw,mh);
-
-  // Border
-  mctx.strokeStyle = P.plum;
-  mctx.lineWidth = 3;
-  mctx.strokeRect(6, 6, mw-12, mh-12);
-
-  // Island positions on map
-  const positions = [
-    {x:100, y:100}, {x:240, y:70},  {x:380, y:110},
-    {x:130, y:220}, {x:290, y:200}, {x:420, y:240}
-  ];
-
-  // Draw connecting dotted lines
-  mctx.setLineDash([4,5]);
-  mctx.strokeStyle = hexAlpha(P.plum, 0.3);
-  mctx.lineWidth = 1.5;
-  for (let i = 0; i < positions.length - 1; i++) {
-    mctx.beginPath();
-    mctx.moveTo(positions[i].x, positions[i].y);
-    mctx.lineTo(positions[i+1].x, positions[i+1].y);
-    mctx.stroke();
+  const pos=[[100,100],[240,70],[380,110],[130,220],[290,200],[420,240]];
+  mctx.setLineDash([4,5]); mctx.strokeStyle=rgba(P.plum,0.3); mctx.lineWidth=1.5;
+  for(let i=0;i<pos.length-1;i++){
+    mctx.beginPath(); mctx.moveTo(pos[i][0],pos[i][1]); mctx.lineTo(pos[i+1][0],pos[i+1][1]); mctx.stroke();
   }
   mctx.setLineDash([]);
 
-  // Draw islands
-  positions.forEach((pos, i) => {
-    const cleared = islandsCleared[i];
-    const isCurrent = i === currentIsland;
-    const locked = i > 0 && !islandsCleared[i-1] && i > currentIsland;
-
-    // Island blob
-    mctx.beginPath();
-    mctx.arc(pos.x, pos.y, 22, 0, Math.PI*2);
-    mctx.fillStyle = locked ? hexAlpha(P.plum, 0.35) : ISLANDS[i].ground;
-    mctx.fill();
-    mctx.strokeStyle = cleared ? P.gold : (isCurrent ? P.coral : P.plum);
-    mctx.lineWidth = isCurrent ? 3 : 2;
-    mctx.stroke();
-
-    // Icon
-    mctx.font = '16px Nunito';
-    mctx.textAlign = 'center';
-    mctx.textBaseline = 'middle';
-    mctx.fillText(cleared ? '✓' : (isCurrent ? '★' : (locked ? '🔒' : String(i+1))), pos.x, pos.y);
-
-    // Label
-    mctx.font = 'bold 10px Nunito';
-    mctx.fillStyle = P.plum;
-    mctx.textAlign = 'center';
-    mctx.fillText(ISLANDS[i].name, pos.x, pos.y + 32);
-
-    // Travel button hint
-    if (!locked && !isCurrent) {
-      mctx.font = '9px Nunito';
-      mctx.fillStyle = hexAlpha(P.plum, 0.6);
-      mctx.fillText('click to travel', pos.x, pos.y + 43);
-    }
+  pos.forEach(([px,py],i)=>{
+    const cleared=islandsCleared[i],isCur=i===currentIsland;
+    const locked=i>0&&!islandsCleared[i-1]&&i>currentIsland;
+    mctx.beginPath(); mctx.arc(px,py,22,0,Math.PI*2);
+    mctx.fillStyle=locked?rgba(P.plum,0.35):ISLANDS[i].grass||'#8BBF6A'; mctx.fill();
+    mctx.strokeStyle=cleared?P.gold:(isCur?P.coral:P.plum); mctx.lineWidth=isCur?3:2; mctx.stroke();
+    mctx.font='15px Nunito'; mctx.textAlign='center'; mctx.textBaseline='middle';
+    mctx.fillStyle=P.cream;
+    mctx.fillText(cleared?'✓':(isCur?'★':(locked?'🔒':String(i+1))),px,py);
+    mctx.font='bold 10px Nunito'; mctx.fillStyle=P.plum; mctx.fillText(ISLANDS[i].name,px,py+34);
   });
 
-  // Compass rose
-  const cx = mw - 48, cy = mh - 48;
-  mctx.save();
-  mctx.translate(cx, cy);
-  ['N','E','S','W'].forEach((dir,i) => {
-    const a = i * Math.PI/2 - Math.PI/2;
-    const r = 24;
+  // Compass
+  const cx2=mw-48,cy2=mh-48;
+  mctx.save(); mctx.translate(cx2,cy2);
+  ['N','E','S','W'].forEach((d,i)=>{
+    const a=i*Math.PI/2-Math.PI/2,r=22;
     mctx.beginPath();
-    mctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
-    mctx.lineTo(Math.cos(a+Math.PI/4)*r*0.4, Math.sin(a+Math.PI/4)*r*0.4);
-    mctx.lineTo(Math.cos(a-Math.PI/4)*r*0.4, Math.sin(a-Math.PI/4)*r*0.4);
+    mctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+    mctx.lineTo(Math.cos(a+Math.PI/4)*r*0.4,Math.sin(a+Math.PI/4)*r*0.4);
+    mctx.lineTo(Math.cos(a-Math.PI/4)*r*0.4,Math.sin(a-Math.PI/4)*r*0.4);
     mctx.closePath();
-    mctx.fillStyle = dir === 'N' ? P.coral : hexAlpha(P.plum, 0.7);
-    mctx.fill();
-    mctx.font = 'bold 8px Nunito';
-    mctx.fillStyle = P.plum;
-    mctx.textAlign = 'center';
-    mctx.textBaseline = 'middle';
-    mctx.fillText(dir, Math.cos(a)*r*1.5, Math.sin(a)*r*1.5);
+    mctx.fillStyle=d==='N'?P.coral:rgba(P.plum,0.7); mctx.fill();
+    mctx.font='bold 8px Nunito'; mctx.fillStyle=P.plum; mctx.textAlign='center'; mctx.textBaseline='middle';
+    mctx.fillText(d,Math.cos(a)*r*1.6,Math.sin(a)*r*1.6);
   });
   mctx.beginPath(); mctx.arc(0,0,5,0,Math.PI*2);
-  mctx.fillStyle = P.cream; mctx.fill();
-  mctx.strokeStyle = P.plum; mctx.lineWidth=1; mctx.stroke();
+  mctx.fillStyle=P.cream; mctx.fill(); mctx.strokeStyle=P.plum; mctx.lineWidth=1; mctx.stroke();
   mctx.restore();
-
-  // Store positions for click
-  window._mapPositions = positions;
+  window._mapPos=pos;
 }
 
-function openMap() {
+function openMap(){
   drawMapCanvas();
   document.getElementById('map-screen').classList.remove('hidden');
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if(animId){cancelAnimationFrame(animId);animId=null;}
 }
-
-function closeMap() {
+function closeMap(){
   document.getElementById('map-screen').classList.add('hidden');
-  if (gameRunning) {
-    lastTime = performance.now();
-    animId = requestAnimationFrame(gameLoop);
-  }
+  if(gameRunning){lastTime=performance.now();animId=requestAnimationFrame(gameLoop);}
 }
 
-// Map click to travel
-document.addEventListener('DOMContentLoaded', () => {
-  const mc = document.getElementById('map-canvas');
-  if (mc) {
-    mc.addEventListener('click', (e) => {
-      if (!window._mapPositions) return;
-      const rect = mc.getBoundingClientRect();
-      const scaleX = mc.width / rect.width;
-      const scaleY = mc.height / rect.height;
-      const mx = (e.clientX - rect.left) * scaleX;
-      const my = (e.clientY - rect.top) * scaleY;
 
-      window._mapPositions.forEach((pos, i) => {
-        const dist = Math.hypot(mx - pos.x, my - pos.y);
-        if (dist < 30) {
-          // Check if unlocked
-          if (i === 0 || islandsCleared[i-1] || i <= currentIsland) {
-            travelToIsland(i);
-          }
-        }
-      });
+// ============= DIALOGUE =============
+function showDialogue(text){dialogueOpen=true;document.getElementById('dialogue').style.display='block';document.getElementById('dialogue-text').textContent=text;}
+function closeDialogue(){dialogueOpen=false;document.getElementById('dialogue').style.display='none';}
+
+// ============= AUDIO =============
+function initAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playTone(freq,type,gain,dur,delay){
+  if(!audioCtx||!soundOn)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);
+  o.type=type||'sine';o.frequency.value=freq;
+  const t=audioCtx.currentTime+(delay||0);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t);o.stop(t+dur+0.05);
+}
+function playCrystalCollect(){[261.63,329.63,392,523.25].forEach((f,i)=>playTone(f,'triangle',0.18,0.25,i*0.09));}
+function playIslandUnlock(){[261.63,329.63,392,523.25,659.25].forEach((f,i)=>playTone(f,'sine',0.15,0.4,i*0.12));playTone(880,'triangle',0.1,0.6,0.65);}
+function startAmbient(){
+  if(!audioCtx||!soundOn||ambientStarted)return;
+  ambientStarted=true;
+  [65.41,98].forEach(f=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.value=f;g.gain.value=0.035;o.start();});
+  const mel=[261.63,293.66,329.63,392,440,392,329.63,293.66];let step=0;
+  function next(){if(!soundOn||!ambientStarted)return;playTone(mel[step++%mel.length],'triangle',0.065,0.5,0);setTimeout(next,640+Math.random()*180);}
+  setTimeout(next,900);
+}
+function toggleSound(){
+  soundOn=!soundOn;
+  document.getElementById('sound-btn').textContent=soundOn?'🔊':'🔇';
+  if(soundOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  if(soundOn&&!ambientStarted)startAmbient();
+}
+
+// ============= INPUT =============
+function setupInput(){
+  window.addEventListener('keydown',e=>{
+    keys[e.key]=true;
+    if(e.key==='m'||e.key==='M'){const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();}
+    if(e.key==='Escape'||e.key==='e'||e.key==='E')closeDialogue();
+    if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  });
+  window.addEventListener('keyup',e=>{keys[e.key]=false;});
+
+  const jz=document.getElementById('joy-zone'),th=document.getElementById('joy-thumb');
+  let jo=null; const MJ=38;
+  jz.addEventListener('touchstart',e=>{e.preventDefault();const r=jz.getBoundingClientRect();jo={x:r.left+r.width/2,y:r.top+r.height/2};initAudio();audioCtx&&audioCtx.resume();},{passive:false});
+  jz.addEventListener('touchmove',e=>{e.preventDefault();if(!jo)return;const t=e.touches[0];let dx=t.clientX-jo.x,dy=t.clientY-jo.y;const d=Math.hypot(dx,dy);if(d>MJ){dx=dx/d*MJ;dy=dy/d*MJ;}joyVec.x=dx/MJ;joyVec.y=dy/MJ;th.style.left=(57+dx)+'px';th.style.top=(57+dy)+'px';},{passive:false});
+  jz.addEventListener('touchend',e=>{e.preventDefault();jo=null;joyVec.x=0;joyVec.y=0;th.style.left='34px';th.style.top='34px';},{passive:false});
+  document.getElementById('action-btn').addEventListener('touchstart',e=>{e.preventDefault();closeDialogue();},{passive:false});
+  document.getElementById('map-mobile-btn').addEventListener('touchstart',e=>{e.preventDefault();const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();},{passive:false});
+
+  document.getElementById('map-canvas').addEventListener('click',e=>{
+    if(!window._mapPos)return;
+    const mc=document.getElementById('map-canvas');
+    const r=mc.getBoundingClientRect();
+    const sx=(e.clientX-r.left)*(mc.width/r.width),sy=(e.clientY-r.top)*(mc.height/r.height);
+    window._mapPos.forEach(([px,py],i)=>{
+      if(Math.hypot(sx-px,sy-py)<30&&(i===0||islandsCleared[i-1]||i<=currentIsland))travelToIsland(i);
     });
-  }
-});
+  });
+  window.addEventListener('click',()=>{initAudio();audioCtx&&audioCtx.resume();},{once:true});
+  window.addEventListener('touchstart',()=>{initAudio();audioCtx&&audioCtx.resume();},{once:true});
+}
 
-function travelToIsland(idx) {
+// ============= RESIZE =============
+function onResize(){
+  W=window.innerWidth;H=window.innerHeight;
+  canvas.width=W;canvas.height=H;
+  document.getElementById('mobile-controls').style.display=W<700?'flex':'none';
+}
+
+// ============= LOAD ISLAND =============
+function loadIsland(idx){
+  currentIsland=idx; crystalsCollected=0;
+  for(let i=0;i<5;i++){const g=document.getElementById(`g${i}`);if(g){g.querySelector('polygon').setAttribute('fill',P.lilac);g.classList.remove('lit');}}
+  player.wx=0.5;player.wy=0.70;player.facing=1;player.collectAnim=0;
+  particles=[];
+  buildScene(idx);spawnCrystals(idx);initClouds();
+  const lbl=document.getElementById('island-label');
+  lbl.textContent=ISLANDS[idx].name;lbl.style.opacity='1';
+  setTimeout(()=>lbl.style.opacity='0',2500);
+  setTimeout(()=>showDialogue(ISLANDS[idx].dialogue),400);
+}
+
+// ============= TRAVEL =============
+function travelToIsland(idx){
   closeMap();
-  // Flash transition
-  const flash = document.getElementById('flash');
-  flash.style.transition = 'opacity 0.3s';
-  flash.style.opacity = '0.85';
-  setTimeout(() => {
-    loadIsland(idx);
-    flash.style.opacity = '0';
-  }, 320);
-  if (!gameRunning) {
-    gameRunning = true;
-    lastTime = performance.now();
-    animId = requestAnimationFrame(gameLoop);
-  }
+  const fl=document.getElementById('flash');
+  fl.style.transition='opacity 0.3s';fl.style.opacity='0.85';
+  setTimeout(()=>{loadIsland(idx);fl.style.opacity='0';},320);
+  if(!gameRunning){gameRunning=true;}
+  lastTime=performance.now();
+  animId=requestAnimationFrame(gameLoop);
 }
 
-
-// ============================================================
-// DIALOGUE
-// ============================================================
-function showDialogue(text) {
-  dialogueOpen = true;
-  const d = document.getElementById('dialogue');
-  d.style.display = 'block';
-  document.getElementById('dialogue-text').textContent = text;
-}
-
-function closeDialogue() {
-  dialogueOpen = false;
-  document.getElementById('dialogue').style.display = 'none';
-}
-
-// ============================================================
-// AUDIO ENGINE
-// ============================================================
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
-
-function playTone(freq, type, gain, dur, delay) {
-  if (!audioCtx || !soundOn) return;
-  const osc = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
-  osc.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  osc.type = type || 'sine';
-  osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (delay||0));
-  gainNode.gain.setValueAtTime(0, audioCtx.currentTime + (delay||0));
-  gainNode.gain.linearRampToValueAtTime(gain, audioCtx.currentTime + (delay||0) + 0.02);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (delay||0) + dur);
-  osc.start(audioCtx.currentTime + (delay||0));
-  osc.stop(audioCtx.currentTime + (delay||0) + dur + 0.05);
-}
-
-function playCrystalCollect() {
-  // C→E→G arpeggio
-  [261.63, 329.63, 392.00, 523.25].forEach((f, i) => {
-    playTone(f, 'triangle', 0.18, 0.25, i * 0.09);
-  });
-}
-
-function playIslandUnlock() {
-  [261.63, 329.63, 392.00, 523.25, 659.25].forEach((f, i) => {
-    playTone(f, 'sine', 0.15, 0.4, i * 0.12);
-  });
-  playTone(880, 'triangle', 0.1, 0.6, 0.65);
-}
-
-function startAmbient() {
-  if (!audioCtx || !soundOn || ambientStarted) return;
-  ambientStarted = true;
-
-  // Pentatonic drone — C major pentatonic: C2, G2
-  const droneFreqs = [65.41, 98.00];
-  droneFreqs.forEach(f => {
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.connect(g); g.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.value = f;
-    g.gain.value = 0.04;
-    osc.start();
-  });
-
-  // Gentle melody loop — pentatonic: C4,D4,E4,G4,A4
-  const mel = [261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66];
-  let step = 0;
-  function playNext() {
-    if (!soundOn || !ambientStarted) return;
-    playTone(mel[step % mel.length], 'triangle', 0.07, 0.55, 0);
-    step++;
-    setTimeout(playNext, 620 + Math.random() * 200);
-  }
-  setTimeout(playNext, 800);
-}
-
-function toggleSound() {
-  soundOn = !soundOn;
-  document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
-  if (soundOn && audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  if (soundOn && !ambientStarted) {
-    startAmbient();
-  }
-}
-
-// ============================================================
-// INPUT
-// ============================================================
-function setupInput() {
-  window.addEventListener('keydown', e => {
-    keys[e.key] = true;
-    if (e.key === 'm' || e.key === 'M') {
-      const ms = document.getElementById('map-screen');
-      if (ms.classList.contains('hidden')) openMap(); else closeMap();
-    }
-    if (e.key === 'Escape') closeDialogue();
-    if (e.key === 'e' || e.key === 'E') closeDialogue();
-    // Resume audio on first key
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    e.preventDefault && (e.key.startsWith('Arrow') && e.preventDefault());
-  });
-  window.addEventListener('keyup', e => { keys[e.key] = false; });
-
-  // Touch joystick
-  const joyZone = document.getElementById('joy-zone');
-  const thumb   = document.getElementById('joy-thumb');
-  let joyOrigin = null;
-  const MAX_JOY = 38;
-
-  function handleJoyStart(e) {
-    e.preventDefault();
-    const touch = e.touches ? e.touches[0] : e;
-    const rect = joyZone.getBoundingClientRect();
-    joyOrigin = {x: rect.left + rect.width/2, y: rect.top + rect.height/2};
-    initAudio(); audioCtx && audioCtx.resume();
-  }
-  function handleJoyMove(e) {
-    e.preventDefault();
-    if (!joyOrigin) return;
-    const touch = e.touches ? e.touches[0] : e;
-    let dx = touch.clientX - joyOrigin.x;
-    let dy = touch.clientY - joyOrigin.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > MAX_JOY) { dx = dx/dist*MAX_JOY; dy = dy/dist*MAX_JOY; }
-    joyVec.x = dx / MAX_JOY;
-    joyVec.y = dy / MAX_JOY;
-    thumb.style.left = (57 + dx) + 'px';
-    thumb.style.top  = (57 + dy) + 'px';
-  }
-  function handleJoyEnd(e) {
-    e.preventDefault();
-    joyOrigin = null;
-    joyVec.x = 0; joyVec.y = 0;
-    thumb.style.left = '34px'; thumb.style.top = '34px';
-  }
-  joyZone.addEventListener('touchstart', handleJoyStart, {passive:false});
-  joyZone.addEventListener('touchmove',  handleJoyMove,  {passive:false});
-  joyZone.addEventListener('touchend',   handleJoyEnd,   {passive:false});
-
-  // Action / map button
-  document.getElementById('action-btn').addEventListener('touchstart', e => {
-    e.preventDefault(); closeDialogue();
-  }, {passive:false});
-  document.getElementById('map-mobile-btn').addEventListener('touchstart', e => {
-    e.preventDefault();
-    const ms = document.getElementById('map-screen');
-    if (ms.classList.contains('hidden')) openMap(); else closeMap();
-  }, {passive:false});
-
-  // Click anywhere to init audio
-  window.addEventListener('click', () => { initAudio(); audioCtx && audioCtx.resume(); }, {once:true});
-  window.addEventListener('touchstart', () => { initAudio(); audioCtx && audioCtx.resume(); }, {once:true});
-}
-
-// ============================================================
-// RESIZE
-// ============================================================
-function onResize() {
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width  = W;
-  canvas.height = H;
-  uiCanvas.width  = W;
-  uiCanvas.height = H;
-
-  // Center the grid
-  const gridW = (GRID_COLS + GRID_ROWS) * TILE_W / 2;
-  const gridH = (GRID_COLS + GRID_ROWS) * TILE_H / 2 + TILE_DEPTH;
-  offX = W / 2;
-  offY = (H - gridH) / 2 + TILE_H * 2;
-
-  // Show mobile controls on small screens
-  const mc = document.getElementById('mobile-controls');
-  mc.style.display = (W < 700) ? 'flex' : 'none';
-}
-
-// ============================================================
-// START / RESTART
-// ============================================================
-function startGame() {
+// ============= START / RESTART =============
+function startGame(){
   document.getElementById('title-screen').classList.add('hidden');
   initAudio();
-  if (audioCtx) audioCtx.resume().then(() => startAmbient());
-
-  gameRunning = true;
-  islandsCleared = new Array(ISLANDS.length).fill(false);
-  score = 0;
-  document.getElementById('score-val').textContent = '0';
-
-  loadIsland(0);
-  lastTime = performance.now();
-  animId = requestAnimationFrame(gameLoop);
+  if(audioCtx)audioCtx.resume().then(()=>startAmbient());
+  gameRunning=true;
+  islandsCleared=new Array(ISLANDS.length).fill(false);
+  score=0;document.getElementById('score-val').textContent='0';
+  loadIsland(0);lastTime=performance.now();
+  animId=requestAnimationFrame(gameLoop);
 }
-
-function restartGame() {
+function restartGame(){
   document.getElementById('win-screen').classList.add('hidden');
-  score = 0;
-  islandsCleared = new Array(ISLANDS.length).fill(false);
-  document.getElementById('score-val').textContent = '0';
-  gameRunning = true;
-  loadIsland(0);
-  lastTime = performance.now();
-  animId = requestAnimationFrame(gameLoop);
+  score=0;islandsCleared=new Array(ISLANDS.length).fill(false);
+  document.getElementById('score-val').textContent='0';
+  gameRunning=true;loadIsland(0);lastTime=performance.now();
+  animId=requestAnimationFrame(gameLoop);
 }
 
-// ============================================================
-// INIT
-// ============================================================
-function init() {
-  canvas   = document.getElementById('gameCanvas');
-  uiCanvas = document.getElementById('uiCanvas');
-  ctx      = canvas.getContext('2d');
-  uiCtx    = uiCanvas.getContext('2d');
-
+// ============= INIT =============
+function init(){
+  canvas=document.getElementById('gameCanvas');
+  ctx=canvas.getContext('2d');
   onResize();
-  window.addEventListener('resize', onResize);
-
+  window.addEventListener('resize',onResize);
   setupInput();
-
-  // Draw title screen background on canvas
-  drawTitleBg();
+  // Draw title bg
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#F2C9D8');g.addColorStop(0.5,'#C6A0D4');g.addColorStop(1,'#9B9AE2');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 }
 
-function drawTitleBg() {
-  ctx.clearRect(0, 0, W, H);
-  // Simple gradient bg behind the title panel
-  const grd = ctx.createLinearGradient(0,0,W,H);
-  grd.addColorStop(0, P.lavender);
-  grd.addColorStop(0.5, P.lilac);
-  grd.addColorStop(1, P.pink);
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,W,H);
-
-  // Draw a few decorative iso tiles
-  const tmpOff = {x: W/2, y: H*0.55};
-  offX = tmpOff.x; offY = tmpOff.y;
-  const sampleIsland = ISLANDS[0];
-  for (let r = 3; r <= 5; r++) {
-    for (let c = 3; c <= 5; c++) {
-      if (ISLAND_SHAPE[r][c]) {
-        drawTile(c, r, sampleIsland.ground, sampleIsland.groundSide, darken(sampleIsland.groundSide, 0.15), false);
-      }
-    }
-  }
-}
-
-window.addEventListener('load', init);
-
-// Also expose globally for HTML onclick handlers
-window.startGame   = startGame;
-window.restartGame = restartGame;
-window.openMap     = openMap;
-window.closeMap    = closeMap;
-window.closeDialogue = closeDialogue;
-window.toggleSound = toggleSound;
+window.addEventListener('load',init);
+window.startGame=startGame;window.restartGame=restartGame;
+window.openMap=openMap;window.closeMap=closeMap;
+window.closeDialogue=closeDialogue;window.toggleSound=toggleSound;
 
 </script>
 </body>
