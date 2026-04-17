@@ -49,6 +49,8 @@ const G={
   nearStone:null,
   nearMarker:null,
   nearFragment:null,
+  showTutorial:true,
+  tutorialPage:0,
 };
 
 // ═══════════════ PETAL TYPES ═══════════════
@@ -709,6 +711,97 @@ function drawPops(){
 }
 
 // ═══════════════ WIN SCREEN ═══════════════
+function drawTutorial(){
+  // Dim backdrop
+  ctx.globalAlpha=0.72;
+  ctx.fillStyle='rgba(10,4,20,0.72)';
+  ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=1;
+
+  const pw=480,ph=G.tutorialPage===0?370:320;
+  const px=W/2-pw/2, py=H/2-ph/2;
+
+  // Panel
+  ctx.shadowColor='rgba(180,120,220,0.7)';ctx.shadowBlur=50;
+  Theme.roundRect(px,py,pw,ph,24);
+  ctx.fillStyle='rgba(255,248,255,0.97)';ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='#c890d8';ctx.lineWidth=2;ctx.stroke();
+
+  ctx.textAlign='center';
+
+  if(G.tutorialPage===0){
+    // Page 1: Story + Goal
+    ctx.fillStyle='#5a2850';ctx.font='bold 22px Georgia';
+    ctx.fillText('✦ Petals & Echoes ✦',W/2,py+46);
+
+    ctx.fillStyle='#7a4060';ctx.font='italic 14px Georgia';
+    ctx.fillText('A gentle puzzle about restoring silence to a noisy world.',W/2,py+74);
+
+    ctx.fillStyle='#5a2850';ctx.font='bold 15px Georgia';
+    ctx.fillText('🎯  Your Goal',W/2,py+110);
+    ctx.fillStyle='#6a3858';ctx.font='14px Georgia';
+    ctx.fillText('Collect petals, combine them into spells,',W/2,py+132);
+    ctx.fillText('and restore the 6 sacred zones to silence.',W/2,py+152);
+
+    ctx.fillStyle='#5a2850';ctx.font='bold 15px Georgia';
+    ctx.fillText('🎮  Controls',W/2,py+188);
+    ctx.fillStyle='#6a3858';ctx.font='14px Georgia';
+    ctx.fillText('W A S D  —  Move',W/2,py+210);
+    ctx.fillText('Walk into glowing petals  —  Collect them',W/2,py+230);
+    ctx.fillText('C  —  Open petal cauldron to combine',W/2,py+250);
+    ctx.fillText('E  —  Interact with wind stones & markers',W/2,py+270);
+    ctx.fillText('Tab  —  Toggle shadow world (reveals secrets)',W/2,py+290);
+
+    // Next button
+    ctx.shadowColor='rgba(180,100,200,0.5)';ctx.shadowBlur=18;
+    Theme.roundRect(W/2-80,py+ph-56,160,36,12);
+    ctx.fillStyle='#c078d8';ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle='#a050b8';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 14px Georgia';
+    ctx.fillText('Next  →',W/2,py+ph-32);
+
+  } else {
+    // Page 2: Alchemy hint + begin
+    ctx.fillStyle='#5a2850';ctx.font='bold 20px Georgia';
+    ctx.fillText('✦ Petal Alchemy ✦',W/2,py+46);
+
+    ctx.fillStyle='#6a3858';ctx.font='14px Georgia';
+    ctx.fillText('Combine petals at the cauldron (press C near it)',W/2,py+76);
+    ctx.fillText('to brew spells that calm each noisy zone.',W/2,py+96);
+
+    ctx.fillStyle='#5a2850';ctx.font='bold 15px Georgia';
+    ctx.fillText('🌸  Known Recipes',W/2,py+128);
+    ctx.fillStyle='#6a3858';ctx.font='14px Georgia';
+    ctx.fillText('Cherry + Moss  →  Bloom Veil',W/2,py+150);
+    ctx.fillText('Dew + Moon  →  Still Water',W/2,py+170);
+    ctx.fillText('Cherry + Dew  →  Rose Mist',W/2,py+190);
+    ctx.fillText('(Explore to discover more combinations!)',W/2,py+214);
+
+    ctx.fillStyle='#7a4060';ctx.font='italic 13px Georgia';
+    ctx.fillText('Tip: Wind stones shift the mood — use Tab in dark areas',W/2,py+244);
+
+    // Begin button
+    ctx.shadowColor='rgba(180,100,200,0.5)';ctx.shadowBlur=18;
+    Theme.roundRect(W/2-100,py+ph-56,200,36,12);
+    ctx.fillStyle='#b060c8';ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle='#8840a8';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 15px Georgia';
+    ctx.fillText('Begin Journey  🌸',W/2,py+ph-32);
+  }
+
+  // Page dots
+  for(let i=0;i<2;i++){
+    ctx.beginPath();
+    ctx.arc(W/2+(i===0?-10:10),py+ph-12,4,0,Math.PI*2);
+    ctx.fillStyle=G.tutorialPage===i?'#b060c8':'#ddb8e8';
+    ctx.fill();
+  }
+
+  // Click hitbox logic stored for use in click handler
+  G._tutorialBtnY=py+ph-56; G._tutorialBtnH=36; G._tutorialPH=ph; G._tutorialPY=py;
+}
+
 function drawWin(){
   ctx.globalAlpha=0.96;
   ctx.shadowColor='rgba(200,160,220,0.6)';ctx.shadowBlur=40;
@@ -759,16 +852,41 @@ function loop(ts){
   updateWind();
   drawPlayer();
   drawShadowOverlay();
-  movePlayer();
+  if(!G.showTutorial) movePlayer();
   drawPops();
   drawHUD();
   drawNotice();
   drawCombineUI();
   drawMemoryScene();
   if(G.won)drawWin();
+  if(G.showTutorial)drawTutorial();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// ── Tutorial dismiss ──────────────────────────────────────
+canvas.addEventListener('click',function(e){
+  if(!G.showTutorial)return;
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const cx=(e.clientX-rect.left)*scaleX;
+  const cy=(e.clientY-rect.top)*scaleY;
+  // Check if click is on the button
+  const btnX=W/2-80, btnW=160;
+  const btnY=G._tutorialBtnY||0, btnH=G._tutorialBtnH||36;
+  if(cx>=btnX&&cx<=btnX+btnW&&cy>=btnY&&cy<=btnY+btnH){
+    if(G.tutorialPage===0){ G.tutorialPage=1; }
+    else { G.showTutorial=false; }
+  }
+});
+document.addEventListener('keydown',function(e){
+  if(!G.showTutorial)return;
+  if(e.key==='Enter'||e.key===' '){
+    if(G.tutorialPage===0){ G.tutorialPage=1; }
+    else { G.showTutorial=false; }
+    e.preventDefault();
+  }
+});
 </script>
 </body>
 </html>
