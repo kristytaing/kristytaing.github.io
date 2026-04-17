@@ -182,49 +182,74 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 <script>
 // ============================================================
 // ============= PALETTE & ISLANDS =============
+// roundRect polyfill for Safari
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    this.beginPath();this.moveTo(x+r,y);this.lineTo(x+w-r,y);
+    this.quadraticCurveTo(x+w,y,x+w,y+r);this.lineTo(x+w,y+h-r);
+    this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);this.lineTo(x+r,y+h);
+    this.quadraticCurveTo(x,y+h,x,y+h-r);this.lineTo(x,y+r);
+    this.quadraticCurveTo(x,y,x+r,y);this.closePath();
+  };
+}
+
 const P = {
   lavender:'#9B9AE2', coral:'#EB6259', lilac:'#C6C3DC',
   gold:'#EBB21A', cream:'#F0DEC2', plum:'#4F4261',
   moss:'#6F7E4A', pink:'#F29FD7'
 };
 
+// Story: Lumis, a star-spirit, shattered into 30 memory crystals
+// scattered across 6 islands. You are a dream-walker called to restore her.
 const ISLANDS = [
   { name:'Petal Cove', biome:'meadow',
     skyTop:'#F2C9D8', skyMid:'#E8A8C0', skyBot:'#C6A0D4',
     grass:'#8BBF6A', grassDark:'#6A9E4A', grassLight:'#A8D484',
     pathCol:'#D4C4A0', rockCol:'#B8A89A', waterCol:'#A8C8E8',
     treeCol:'#F4C86A', treeDark:'#DFA840', accent:'#F29FD7',
-    dialogue:"Welcome to Petal Cove! Collect 5 glowing crystals!" },
+    dialogue:"A soft voice drifts through the petals…\n\n\"Dream-walker. You came.\"\n\nA star named Lumis once lit the whole archipelago — until she shattered. Her memories fell as crystals across these islands. Only you can hear them sing.\n\nFind the 5 fragments of her childhood, hidden in Petal Cove.",
+    lore:["I remember the smell of rain…", "I used to chase fireflies here.", "This meadow was the first thing I ever loved.", "Someone planted these flowers for me.", "If you hold this, you'll feel warm. I always did."],
+    clearText:"You gathered Lumis's first memories. She remembers joy.\n\nThe path to Crystal Spire glows before you. ✨" },
   { name:'Crystal Spire', biome:'crystal',
     skyTop:'#9B9AE2', skyMid:'#C6C3DC', skyBot:'#F0DEC2',
     grass:'#7A8EC4', grassDark:'#5A6EA4', grassLight:'#9AAEDC',
     pathCol:'#C6C3DC', rockCol:'#9B9AE2', waterCol:'#C0D8F0',
     treeCol:'#C6C3DC', treeDark:'#9B9AE2', accent:'#F29FD7',
-    dialogue:"Crystal Spire hums with ancient energy. Find the gems!" },
+    dialogue:"The spires hum with old light.\n\n\"These are my thoughts,\" whispers Lumis. \"I used to think so clearly up here.\"\n\nFind her 5 fragments of curiosity — the crystals that hold her wonder.",
+    lore:["I once tried to count every star.", "Questions are more beautiful than answers.", "I carved my name in light, once.", "The universe is lonelier than it looks.", "…but also fuller than you'd think."],
+    clearText:"Lumis's curiosity returns. She begins to remember why she shone.\n\nEmber Isles awaits. ✨" },
   { name:'Ember Isles', biome:'desert',
     skyTop:'#F4A84A', skyMid:'#EB6259', skyBot:'#F0DEC2',
     grass:'#C8A84A', grassDark:'#A88430', grassLight:'#E0C86A',
     pathCol:'#E8D4A0', rockCol:'#C09060', waterCol:'#A8D0C0',
     treeCol:'#EB6259', treeDark:'#C04040', accent:'#EBB21A',
-    dialogue:"Ember Isles burns bright! Collect all crystals!" },
+    dialogue:"The heat shimmers with old emotion.\n\n\"I fell apart here,\" Lumis admits. \"These are the pieces of my anger. My grief. My fire.\"\n\nFind her 5 fragments of feeling — the ones that burned brightest.",
+    lore:["I was so angry, once.", "Grief looks like fire from the inside.", "I burned bridges I wish I hadn't.", "But fire also keeps people warm.", "Passion is just love with nowhere to go."],
+    clearText:"Lumis reclaims her fire. She shines a little brighter now.\n\nMisty Shores calls you forward. ✨" },
   { name:'Misty Shores', biome:'beach',
     skyTop:'#C0D8F0', skyMid:'#A0C4E8', skyBot:'#F0DEC2',
     grass:'#A0C888', grassDark:'#80A868', grassLight:'#C0E0A8',
     pathCol:'#E8D8B8', rockCol:'#C0B8A8', waterCol:'#88C0D8',
     treeCol:'#88C898', treeDark:'#60A878', accent:'#F0DEC2',
-    dialogue:"Misty Shores whispers secrets. Seek the crystals!" },
+    dialogue:"Mist rolls in over quiet waves.\n\n\"These are my secrets,\" Lumis murmurs. \"Things I never told anyone. I hid them here where the tide could keep them safe.\"\n\nFind her 5 fragments of longing.",
+    lore:["I loved someone I never told.", "I wanted to be seen. Really seen.", "Sometimes I'd shine extra bright, just hoping.", "Loneliness sounds like waves at night.", "But even alone, I was part of something."],
+    clearText:"Lumis remembers her longing — and her courage.\n\nVerdant Peak rises ahead. ✨" },
   { name:'Verdant Peak', biome:'forest',
     skyTop:'#7A9A5A', skyMid:'#9B9AE2', skyBot:'#C6C3DC',
     grass:'#5A8A3A', grassDark:'#3A6A1A', grassLight:'#7AAA5A',
     pathCol:'#C8B888', rockCol:'#888870', waterCol:'#6888A8',
     treeCol:'#EBB21A', treeDark:'#C89018', accent:'#F29FD7',
-    dialogue:"Verdant Peak teems with life! Crystals glow in the leaves!" },
+    dialogue:"Something ancient lives in these trees.\n\n\"I grew here,\" Lumis says softly. \"These are my years. My becoming. Find them.\"\n\nFind her 5 fragments of becoming.",
+    lore:["I was different, once. Smaller.", "Growing up means losing some things.", "But it means finding others.", "I learned to shine outward, not just burn.", "I was becoming something worth remembering."],
+    clearText:"Lumis is almost whole. Her light fills the sky above Verdant Peak.\n\nOne island remains. Starfall Atoll. ✨" },
   { name:'Starfall Atoll', biome:'night',
     skyTop:'#2A2048', skyMid:'#4F4261', skyBot:'#9B9AE2',
     grass:'#3A3868', grassDark:'#2A2850', grassLight:'#5A58A0',
     pathCol:'#6A6888', rockCol:'#4A4868', waterCol:'#3A4868',
     treeCol:'#9B9AE2', treeDark:'#6A6AAA', accent:'#EBB21A',
-    dialogue:"Starfall Atoll — the final island! Claim the last crystals!" }
+    dialogue:"\"This is where I fell,\" Lumis whispers.\n\nThe atoll is dark except for the faintest glow where her final memories rest.\n\n\"Find them. And I can come home.\"\n\nFind her 5 final fragments — the pieces of her purpose.",
+    lore:["I shattered so the light could spread further.", "A star doesn't die. It scatters.", "Every island holds a piece of what I was.", "You were the only one who could hear me.", "Thank you for walking this far for a stranger."],
+    clearText:"" }  // handled by win screen
 ];
 
 const CRYSTALS_PER_ISLAND = 5;
@@ -725,6 +750,10 @@ function drawCharacter(t) {
 
 // ============= CRYSTAL =============
 function drawCrystal(cx, t) {
+  // Proximity to player — increase glow when close
+  const pdx = cx.wx - player.wx, pdy = cx.wy - player.wy;
+  const proximity = 1 - Math.min(1, Math.hypot(pdx, pdy) / 0.18);
+  cx._proximity = proximity; // store for use below
   if (cx.collected) return;
   const {sx, sy} = ws(cx.wx, cx.wy);
   const sc = depthScale(cx.wy - 0.18) * 1.4;
@@ -765,12 +794,22 @@ function drawCrystal(cx, t) {
   ctx.moveTo(-gs*0.5,-gs*0.8); ctx.lineTo(0,-gs*1.1); ctx.lineTo(-gs*0.8,-gs*0.1);
   ctx.fillStyle = lighten(P.lavender, 0.45); ctx.fill();
   // Sparkle
-  ctx.shadowColor = P.lavender; ctx.shadowBlur = 12;
+  ctx.shadowColor = P.lavender; ctx.shadowBlur = 12 + (cx._proximity||0)*28;
   ctx.beginPath(); ctx.arc(-gs*0.3,-gs*0.5,2*sc,0,Math.PI*2);
   ctx.fillStyle='#fff'; ctx.fill();
   ctx.shadowBlur=0;
-  ctx.restore();
-  ctx.restore();
+  ctx.restore(); // end shadow ctx
+  // Proximity pulse ring
+  const _prox = cx._proximity||0;
+  if(_prox > 0.1){
+    const ringAlpha = _prox * 0.55 * (0.5 + 0.5*Math.sin(t*4 + cx.phase));
+    ctx.beginPath();
+    ctx.arc(0, 0, (18 + _prox*14)*sc, 0, Math.PI*2);
+    ctx.strokeStyle = rgba(P.lavender, ringAlpha);
+    ctx.lineWidth = 2*sc;
+    ctx.stroke();
+  }
+  ctx.restore(); // end translate
 }
 
 // ============= PARTICLES =============
@@ -812,10 +851,23 @@ function drawParticles() {
     if(p.text){
       ctx.save();
       ctx.globalAlpha = Math.max(0, p.life);
-      ctx.font = `bold ${Math.round(14*p.life+8)}px Nunito`;
-      ctx.fillStyle = p.col;
-      ctx.textAlign = 'center';
-      ctx.fillText(p.text, p.x, p.y);
+      if(p.isLore){
+        // Lore bubble
+        ctx.font = `italic 600 13px Nunito`;
+        ctx.textAlign = 'center';
+        const tw = ctx.measureText(p.text).width;
+        ctx.fillStyle = 'rgba(240,222,194,0.92)';
+        ctx.beginPath(); ctx.roundRect(p.x-tw/2-10, p.y-18, tw+20, 26, 8); ctx.fill();
+        ctx.strokeStyle = rgba(P.plum,0.25); ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle = P.plum;
+        ctx.fillText(p.text, p.x, p.y);
+      } else {
+        ctx.font = `bold ${Math.round(14*p.life+8)}px Nunito`;
+        ctx.fillStyle = p.col;
+        ctx.textAlign = 'center';
+        ctx.shadowColor=p.col; ctx.shadowBlur=6;
+        ctx.fillText(p.text, p.x, p.y);
+      }
       ctx.restore();
     }
   });
@@ -959,8 +1011,9 @@ function spawnCrystals(islandIdx) {
   ];
   // Shuffle
   for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
+  const lore = ISLANDS[islandIdx].lore || ['✨','✨','✨','✨','✨'];
   positions.forEach(([wx,wy],i)=>{
-    crystals.push({wx,wy,phase:(i/5)*Math.PI*2,collected:false});
+    crystals.push({wx,wy,phase:(i/5)*Math.PI*2,collected:false,lore:lore[i]});
   });
 }
 
@@ -1069,6 +1122,7 @@ function collectCrystal(cx) {
   // Score pop
   const {sx,sy} = ws(cx.wx,cx.wy);
   particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
+  if(cx.lore) particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:cx.lore,isLore:true});
   for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
   crystalsCollected++;
   score+=100;
@@ -1089,6 +1143,7 @@ function collectCrystal(cx) {
 
 function onIslandComplete() {
   islandsCleared[currentIsland]=true;
+  saveProgress();
   playIslandUnlock();
   if(currentIsland>=ISLANDS.length-1){
     gameRunning=false;
@@ -1102,7 +1157,8 @@ function onIslandComplete() {
       "Island complete! Your next adventure is just a map away (M)! 🎉"
     ];
     const hint = travelHints[Math.min(currentIsland, travelHints.length-1)];
-    showDialogue(`✨ ${ISLANDS[currentIsland].name} cleared!\n\nYou collected all 5 crystals! The path to ${ISLANDS[currentIsland+1].name} glows before you.\n\n${hint}`);
+    const ct=ISLANDS[currentIsland].clearText||`✨ ${ISLANDS[currentIsland].name} cleared!\n\nThe path to ${ISLANDS[currentIsland+1].name} glows before you.`;
+    showDialogue(ct);
   }
 }
 
@@ -1281,19 +1337,44 @@ function travelToIsland(idx){
 }
 
 // ============= START / RESTART =============
+function saveProgress(){
+  try{localStorage.setItem('whimsical_save',JSON.stringify({currentIsland,islandsCleared,score}));}catch(e){}
+}
+function loadProgress(){
+  try{
+    const s=localStorage.getItem('whimsical_save');
+    if(!s) return null;
+    return JSON.parse(s);
+  }catch(e){return null;}
+}
+function clearProgress(){
+  try{localStorage.removeItem('whimsical_save');}catch(e){}
+}
 function startGame(){
   document.getElementById('title-screen').classList.add('hidden');
   initAudio();
   if(audioCtx)audioCtx.resume().then(()=>startAmbient());
   gameRunning=true;
-  if(document.activeElement) document.activeElement.blur(); // prevent space re-triggering buttons
-  islandsCleared=new Array(ISLANDS.length).fill(false);
-  score=0;document.getElementById('score-val').textContent='0';
-  loadIsland(0);lastTime=performance.now();
+  if(document.activeElement) document.activeElement.blur();
+  const saved = loadProgress();
+  if(saved && saved.islandsCleared && saved.islandsCleared.some(Boolean)){
+    // Resume saved game
+    islandsCleared = saved.islandsCleared;
+    score = saved.score||0;
+    document.getElementById('score-val').textContent=score;
+    const startIdx = Math.min(saved.currentIsland||0, ISLANDS.length-1);
+    loadIsland(startIdx);
+  } else {
+    islandsCleared=new Array(ISLANDS.length).fill(false);
+    score=0;document.getElementById('score-val').textContent='0';
+    loadIsland(0);
+  }
+  lastTime=performance.now();
   animId=requestAnimationFrame(gameLoop);
 }
 function restartGame(){
   document.getElementById('win-screen').classList.add('hidden');
+  clearProgress();
   score=0;islandsCleared=new Array(ISLANDS.length).fill(false);
   document.getElementById('score-val').textContent='0';
   gameRunning=true;loadIsland(0);lastTime=performance.now();
@@ -1307,6 +1388,21 @@ function init(){
   onResize();
   window.addEventListener('resize',onResize);
   setupInput();
+  // Show continue button if save exists
+  const _sv=loadProgress();
+  if(_sv&&_sv.islandsCleared&&_sv.islandsCleared.some(Boolean)){
+    const _cb=document.createElement('button');
+    _cb.className='btn-s'; _cb.style.marginTop='8px';
+    const _ci=Math.min(_sv.currentIsland||0,ISLANDS.length-1);
+    _cb.textContent=`🌟 Continue (${ISLANDS[_ci].name})`;
+    _cb.onclick=startGame;
+    document.querySelector('.panel').appendChild(_cb);
+    const _nb=document.createElement('button');
+    _nb.className='btn-s'; _nb.style.marginTop='4px'; _nb.style.fontSize='11px';
+    _nb.textContent='Start fresh';
+    _nb.onclick=()=>{clearProgress();location.reload();};
+    document.querySelector('.panel').appendChild(_nb);
+  }
   // Draw title bg
   const g=ctx.createLinearGradient(0,0,W,H);
   g.addColorStop(0,'#F2C9D8');g.addColorStop(0.5,'#C6A0D4');g.addColorStop(1,'#9B9AE2');
