@@ -41,14 +41,13 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
 
 /* Dialogue */
 #dialogue{position:fixed;bottom:0;left:0;right:0;z-index:30;
-  background:#F0DEC2;border-top:3px solid #EB6259;
-  padding:18px 28px 22px;display:none;font-family:'Nunito',sans-serif;
-  box-shadow:0 -4px 20px rgba(79,66,97,0.25);}
+  background:rgba(240,222,194,0.92);border-top:3px solid #EB6259;
+  padding:14px 28px 14px;display:none;font-family:'Nunito',sans-serif;
+  box-shadow:0 -4px 20px rgba(79,66,97,0.25);backdrop-filter:blur(4px);
+  cursor:pointer;pointer-events:all;}
 #dialogue-text{color:#4F4261;font-size:15px;font-weight:600;line-height:1.6;white-space:pre-wrap;}
-#dialogue-close{margin-top:12px;background:#EB6259;color:#F0DEC2;border:none;
-  border-radius:10px;padding:8px 24px;font-family:'Nunito',sans-serif;
-  font-size:14px;font-weight:800;cursor:pointer;pointer-events:all;}
-#dialogue-close:hover{background:#4F4261;}
+#dialogue-hint{color:#9B9AE2;font-size:11px;font-weight:700;margin-top:4px;text-align:right;}
+#dialogue-close{display:none;}
 
 /* Screens */
 .screen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
@@ -131,8 +130,9 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
   <div id="map-hint">M = Map</div>
 </div>
 
-<div id="dialogue">
+<div id="dialogue" onclick="closeDialogue()">
   <div id="dialogue-text"></div>
+  <div id="dialogue-hint">tap or press Space to continue ✨</div>
   <button id="dialogue-close" onclick="closeDialogue()">Continue ✨</button>
 </div>
 
@@ -140,7 +140,7 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
   <div class="panel">
     <div style="font-size:32px;margin-bottom:10px">🌸🔮🌿</div>
     <h1>Whimsical Island<br>Adventure</h1>
-    <div class="sub">A cozy isometric exploration game</div>
+    <div class="sub">A cozy top-down exploration game</div>
     <p>Explore 6 magical islands. Collect 5 glowing crystals per island to unlock the next destination across the archipelago.</p>
     <button class="btn-p" onclick="startGame()">✨ Begin Adventure</button><br>
     <button class="btn-s" onclick="openMap()">🗺 View Map</button>
@@ -173,7 +173,7 @@ body{background:#4F4261;overflow:hidden;font-family:'Nunito',sans-serif;touch-ac
   </div>
   <div class="rbgroup">
     <div id="map-mobile-btn" ontouchstart="e=>{e.preventDefault();openMap()}">🗺</div>
-    <div id="action-btn">E</div>
+    <div id="action-btn">✨</div>
   </div>
 </div>
 <div id="flash"></div>
@@ -529,154 +529,171 @@ function drawCharacter(t) {
   const sc = depthScale(player.wy) * 1.2;
   const bob = Math.sin(player.bobT * 3.5) * 2.5 * sc;
   const breath = Math.sin(player.bobT * 1.2) * 0.018 + 1.0;
-  const facing = player.facing;
-  const scarfWave = Math.sin(t * 3.5 + 0.5) * 6 * sc;
-  // Use separate flip via translate instead of negative scale (avoids clipping bugs)
-  const cx = sx + (facing < 0 ? 0 : 0);
+  const facing = player.facing; // 1=right, -1=left
+  const scarfWave = Math.sin(t * 2.5) * 5 * sc;
 
   ctx.save();
-  ctx.translate(cx, sy - 8*sc + bob);
-  if (facing < 0) { ctx.scale(-1 * breath, breath); } else { ctx.scale(breath, breath); }
+  ctx.translate(sx, sy - 8*sc + bob);
+  ctx.scale(breath, breath);
 
   // Ground shadow
   ctx.beginPath();
-  ctx.ellipse(0, 2*sc, 16*sc, 5*sc, 0, 0, Math.PI*2);
+  ctx.ellipse(0, 4*sc, 18*sc, 6*sc, 0, 0, Math.PI*2);
   ctx.fillStyle = rgba(P.plum, 0.18);
   ctx.fill();
 
-  // --- LEGS (small, simple) ---
-  const lSwing = Math.sin(player.stepT * 7) * 5 * sc;
-  ctx.fillStyle = darken(P.plum, 0.1);
-  // Left leg
+  // --- LONG FLOWING HAIR (drawn BEHIND body) ---
+  ctx.fillStyle = '#4A2810';
+  // Long hair flowing down behind - two strands
   ctx.beginPath();
-  ctx.ellipse(-4*sc, -1*sc + lSwing*0.5, 3*sc, 5*sc, 0, 0, Math.PI*2);
+  ctx.moveTo(-8*sc, -42*sc);
+  ctx.quadraticCurveTo(-16*sc - scarfWave*0.3, -20*sc, -14*sc - scarfWave*0.2, 10*sc);
+  ctx.quadraticCurveTo(-12*sc, 16*sc, -8*sc, 14*sc);
+  ctx.quadraticCurveTo(-6*sc, 4*sc, -10*sc - scarfWave*0.1, -20*sc);
+  ctx.closePath();
   ctx.fill();
-  // Right leg
   ctx.beginPath();
-  ctx.ellipse(4*sc, -1*sc - lSwing*0.5, 3*sc, 5*sc, 0, 0, Math.PI*2);
+  ctx.moveTo(8*sc, -42*sc);
+  ctx.quadraticCurveTo(16*sc + scarfWave*0.3, -20*sc, 14*sc + scarfWave*0.2, 10*sc);
+  ctx.quadraticCurveTo(12*sc, 16*sc, 8*sc, 14*sc);
+  ctx.quadraticCurveTo(6*sc, 4*sc, 10*sc + scarfWave*0.1, -20*sc);
+  ctx.closePath();
   ctx.fill();
-  // Shoes - small dark ovals
-  ctx.fillStyle = P.plum;
-  ctx.beginPath(); ctx.ellipse(-4*sc, 4*sc + lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(4*sc, 4*sc - lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
 
-  // --- BODY (simple white/cream dress shape) ---
+  // --- LEGS ---
+  const lSwing = Math.sin(player.stepT * 7) * 4 * sc;
+  ctx.fillStyle = '#7B5EA7';
+  ctx.beginPath(); ctx.ellipse(-4*sc, 0 + lSwing*0.5, 3*sc, 6*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4*sc, 0 - lSwing*0.5, 3*sc, 6*sc, 0, 0, Math.PI*2); ctx.fill();
+  // Shoes
+  ctx.fillStyle = P.plum;
+  ctx.beginPath(); ctx.ellipse(-4*sc, 6*sc + lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4*sc, 6*sc - lSwing*0.5, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+
+  // --- BODY (flared dress) ---
   ctx.beginPath();
-  ctx.moveTo(-9*sc, -8*sc);
-  ctx.lineTo(-11*sc, -5*sc);
-  ctx.lineTo(-10*sc, 2*sc);
-  ctx.lineTo(10*sc, 2*sc);
-  ctx.lineTo(11*sc, -5*sc);
-  ctx.lineTo(9*sc, -8*sc);
-  ctx.lineTo(0, -22*sc);
+  ctx.moveTo(-7*sc, -22*sc);
+  ctx.lineTo(-12*sc, -2*sc);
+  ctx.lineTo(-13*sc, 4*sc);
+  ctx.lineTo(13*sc, 4*sc);
+  ctx.lineTo(12*sc, -2*sc);
+  ctx.lineTo(7*sc, -22*sc);
   ctx.closePath();
   ctx.fillStyle = P.cream;
   ctx.fill();
-  ctx.strokeStyle = rgba(P.plum, 0.25);
-  ctx.lineWidth = 0.8*sc;
+  ctx.strokeStyle = rgba(P.plum, 0.15);
+  ctx.lineWidth = 0.7*sc;
+  ctx.stroke();
+  // Dress detail line
+  ctx.beginPath();
+  ctx.moveTo(-5*sc, -10*sc);
+  ctx.lineTo(-8*sc, 2*sc);
+  ctx.strokeStyle = rgba(P.plum, 0.1);
+  ctx.lineWidth = 0.5*sc;
   ctx.stroke();
 
   // Arms
-  ctx.strokeStyle = P.cream;
-  ctx.lineWidth = 3.5*sc;
+  ctx.strokeStyle = '#F5E0C8';
+  ctx.lineWidth = 4*sc;
   ctx.lineCap = 'round';
-  // Left arm hangs, right arm slightly raised
   ctx.beginPath();
-  ctx.moveTo(-9*sc, -14*sc);
-  ctx.quadraticCurveTo(-16*sc, -10*sc, -14*sc, -2*sc);
+  ctx.moveTo(-7*sc, -18*sc);
+  ctx.quadraticCurveTo(-15*sc, -12*sc, -13*sc, -4*sc);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(9*sc, -14*sc);
-  ctx.quadraticCurveTo(17*sc, -9*sc, 15*sc, -3*sc);
+  ctx.moveTo(7*sc, -18*sc);
+  ctx.quadraticCurveTo(15*sc, -12*sc, 13*sc, -4*sc);
   ctx.stroke();
 
-  // --- SCARF (flowing, red/coral, very visible) ---
-  ctx.save();
-  // Main scarf wrap at neck
+  // --- SCARF (coral, flows to one side based on facing) ---
+  const scarfDir = facing; // flows opposite to movement direction
   ctx.fillStyle = P.coral;
+  // Neck wrap
   ctx.beginPath();
-  ctx.ellipse(0, -20*sc, 10*sc, 4*sc, 0, 0, Math.PI*2);
+  ctx.ellipse(0, -22*sc, 9*sc, 4*sc, 0, 0, Math.PI*2);
   ctx.fill();
-  // Scarf tail flowing behind (wind effect)
+  // Flowing tail - goes behind (opposite facing direction)
   ctx.beginPath();
-  ctx.moveTo(7*sc, -22*sc);
-  ctx.quadraticCurveTo(20*sc + scarfWave, -18*sc, 24*sc + scarfWave*0.7, -10*sc);
-  ctx.quadraticCurveTo(22*sc + scarfWave, -5*sc, 18*sc + scarfWave*0.5, -8*sc);
-  ctx.quadraticCurveTo(16*sc, -14*sc, 7*sc, -18*sc);
+  ctx.moveTo(-scarfDir*6*sc, -24*sc);
+  ctx.quadraticCurveTo(-scarfDir*18*sc + scarfWave, -20*sc, -scarfDir*22*sc + scarfWave*0.8, -10*sc);
+  ctx.quadraticCurveTo(-scarfDir*20*sc + scarfWave*0.6, -4*sc, -scarfDir*16*sc, -8*sc);
+  ctx.quadraticCurveTo(-scarfDir*14*sc, -16*sc, -scarfDir*5*sc, -20*sc);
   ctx.closePath();
-  ctx.fillStyle = P.coral;
   ctx.fill();
   // Scarf highlight
   ctx.beginPath();
-  ctx.moveTo(8*sc, -22*sc);
-  ctx.quadraticCurveTo(18*sc + scarfWave, -19*sc, 20*sc + scarfWave*0.7, -12*sc);
-  ctx.strokeStyle = lighten(P.coral, 0.3);
+  ctx.moveTo(-scarfDir*7*sc, -24*sc);
+  ctx.quadraticCurveTo(-scarfDir*16*sc + scarfWave, -21*sc, -scarfDir*19*sc + scarfWave*0.8, -12*sc);
+  ctx.strokeStyle = lighten(P.coral, 0.35);
   ctx.lineWidth = 1.5*sc;
   ctx.stroke();
-  ctx.restore();
 
-  // --- HEAD (large chibi circle) ---
-  const headR = 18*sc;
-  const headY = -38*sc;
-  // Head shadow/back
-  ctx.beginPath();
-  ctx.arc(2*sc, headY+2*sc, headR, 0, Math.PI*2);
-  ctx.fillStyle = rgba(P.plum, 0.1);
-  ctx.fill();
-  // Head
+  // --- HEAD ---
+  const headR = 17*sc;
+  const headY = -40*sc;
+  // Head base
   ctx.beginPath();
   ctx.arc(0, headY, headR, 0, Math.PI*2);
-  ctx.fillStyle = '#F5E6D0';
+  ctx.fillStyle = '#F7E8D2';
   ctx.fill();
-  ctx.strokeStyle = rgba(P.plum, 0.2);
-  ctx.lineWidth = 0.8*sc;
+  ctx.strokeStyle = rgba(P.plum, 0.12);
+  ctx.lineWidth = 0.7*sc;
   ctx.stroke();
 
-  // --- HAIR (dark brown, soft) ---
-  ctx.fillStyle = '#5C3A1E';
-  // Back hair
+  // --- HAIR (front/top - always facing forward) ---
+  ctx.fillStyle = '#4A2810';
+  // Top hair mass
   ctx.beginPath();
-  ctx.arc(0, headY, headR*1.05, Math.PI*0.85, Math.PI*2.15);
+  ctx.arc(0, headY - headR*0.2, headR*1.02, Math.PI, Math.PI*2);
   ctx.fill();
-  // Top tuft
+  // Front bang - center part
   ctx.beginPath();
-  ctx.ellipse(0, headY - headR*0.9, headR*0.75, headR*0.5, 0, 0, Math.PI*2);
+  ctx.ellipse(0, headY - headR*0.95, headR*0.5, headR*0.38, 0, 0, Math.PI*2);
   ctx.fill();
-  // Side bangs
+  // Left bang
   ctx.beginPath();
-  ctx.ellipse(-headR*0.7, headY - headR*0.1, headR*0.3, headR*0.55, -0.3, 0, Math.PI*2);
+  ctx.moveTo(-headR*0.9, headY - headR*0.4);
+  ctx.quadraticCurveTo(-headR*1.1, headY + headR*0.1, -headR*0.85, headY + headR*0.4);
+  ctx.quadraticCurveTo(-headR*0.65, headY + headR*0.5, -headR*0.55, headY + headR*0.2);
+  ctx.quadraticCurveTo(-headR*0.7, headY - headR*0.1, -headR*0.7, headY - headR*0.4);
+  ctx.closePath();
   ctx.fill();
+  // Right bang
   ctx.beginPath();
-  ctx.ellipse(headR*0.7, headY - headR*0.1, headR*0.3, headR*0.55, 0.3, 0, Math.PI*2);
-  ctx.fill();
-  // Hair flowing behind (wind)
-  ctx.beginPath();
-  ctx.moveTo(facing*headR*0.7, headY+headR*0.3);
-  ctx.quadraticCurveTo(facing*headR*1.4, headY+headR*0.8, facing*headR*1.8, headY+headR*1.5);
-  ctx.quadraticCurveTo(facing*headR*1.6, headY+headR*1.8, facing*headR*1.2, headY+headR*1.2);
-  ctx.quadraticCurveTo(facing*headR*1.0, headY+headR*0.7, facing*headR*0.5, headY+headR*0.5);
+  ctx.moveTo(headR*0.9, headY - headR*0.4);
+  ctx.quadraticCurveTo(headR*1.1, headY + headR*0.1, headR*0.85, headY + headR*0.4);
+  ctx.quadraticCurveTo(headR*0.65, headY + headR*0.5, headR*0.55, headY + headR*0.2);
+  ctx.quadraticCurveTo(headR*0.7, headY - headR*0.1, headR*0.7, headY - headR*0.4);
   ctx.closePath();
   ctx.fill();
 
-  // --- FACE ---
-  // Eyes (large, expressive dot eyes)
-  ctx.fillStyle = '#2A1A0E';
-  ctx.beginPath(); ctx.ellipse(-6*sc, headY-2*sc, 4*sc, 4.5*sc, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(6*sc, headY-2*sc, 4*sc, 4.5*sc, 0, 0, Math.PI*2); ctx.fill();
-  // Eye shine
+  // --- FACE (always forward-facing) ---
+  // Eyes - big cute chibi eyes
+  ctx.fillStyle = '#1A0A00';
+  ctx.beginPath(); ctx.ellipse(-5.5*sc, headY + 1*sc, 3.5*sc, 4*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5.5*sc, headY + 1*sc, 3.5*sc, 4*sc, 0, 0, Math.PI*2); ctx.fill();
+  // Eye whites/shine
   ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(-5*sc, headY-3.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(7*sc, headY-3.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
-  // Rosy cheeks
-  ctx.fillStyle = rgba(P.coral, 0.28);
-  ctx.beginPath(); ctx.ellipse(-10*sc, headY+2*sc, 6*sc, 3.5*sc, -0.2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(10*sc, headY+2*sc, 6*sc, 3.5*sc, 0.2, 0, Math.PI*2); ctx.fill();
-  // Tiny smile
-  ctx.strokeStyle = rgba('#5C3A1E', 0.6);
+  ctx.beginPath(); ctx.arc(-4.5*sc, headY - 0.5*sc, 1.4*sc, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6.5*sc, headY - 0.5*sc, 1.4*sc, 0, Math.PI*2); ctx.fill();
+  // Eyelashes (small arcs above eyes)
+  ctx.strokeStyle = '#1A0A00';
   ctx.lineWidth = 1.2*sc;
   ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(-5.5*sc, headY + 1*sc, 4*sc, Math.PI*1.2, Math.PI*1.8); ctx.stroke();
+  ctx.beginPath(); ctx.arc(5.5*sc, headY + 1*sc, 4*sc, Math.PI*1.2, Math.PI*1.8); ctx.stroke();
+  // Nose - tiny dot
+  ctx.fillStyle = rgba('#5C3A1E', 0.4);
+  ctx.beginPath(); ctx.arc(0, headY + 5*sc, 1.2*sc, 0, Math.PI*2); ctx.fill();
+  // Rosy cheeks
+  ctx.fillStyle = rgba(P.coral, 0.22);
+  ctx.beginPath(); ctx.ellipse(-9*sc, headY + 4*sc, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(9*sc, headY + 4*sc, 5*sc, 3*sc, 0, 0, Math.PI*2); ctx.fill();
+  // Smile
+  ctx.strokeStyle = rgba('#5C3A1E', 0.55);
+  ctx.lineWidth = 1.1*sc;
   ctx.beginPath();
-  ctx.arc(0, headY+3*sc, 4*sc, 0.1, Math.PI-0.1);
+  ctx.arc(0, headY + 5*sc, 3.5*sc, 0.15, Math.PI - 0.15);
   ctx.stroke();
 
   // collect flash
@@ -981,7 +998,7 @@ function gameLoop(now) {
   const dt=Math.min((now-lastTime)/1000,0.05);
   lastTime=now;
   const t=now/1000;
-  if(!dialogueOpen) updatePlayer(dt);
+  updatePlayer(dt);
   updateClouds(dt);
   updateParticles(dt);
   renderScene(t);
@@ -1090,7 +1107,7 @@ function setupInput(){
   window.addEventListener('keydown',e=>{
     keys[e.key]=true;
     if(e.key==='m'||e.key==='M'){const ms=document.getElementById('map-screen');ms.classList.contains('hidden')?openMap():closeMap();}
-    if(e.key==='Escape'||e.key==='e'||e.key==='E')closeDialogue();
+    if(e.key==='Escape'||e.key==='e'||e.key==='E'||e.key===' ')closeDialogue();
     if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
   });
   window.addEventListener('keyup',e=>{keys[e.key]=false;});
