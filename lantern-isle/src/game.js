@@ -43,7 +43,7 @@ const dialogueBox  = document.getElementById('dialogue-box');
 const dialogueText = document.getElementById('dialogue-text');
 const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueContinue = document.getElementById('dialogue-continue');
-let dialogueQueue = [], dialogueCallback = null, typewriterTimer = null, currentLine = '';
+let dialogueQueue = [], dialogueCallback = null, typewriterTimer = null, currentLine = '', fullLine = '';
 
 // ── HUD ───────────────────────────────────────────────────────
 function updateCrystalHUD() {
@@ -199,6 +199,7 @@ function advanceDialogue() {
     closeDialogue(); return;
   }
   const line = dialogueQueue.shift();
+  fullLine = line;
   currentLine = '';
   dialogueText.textContent = '';
   dialogueContinue.style.display = 'none';
@@ -415,7 +416,7 @@ window.addEventListener('keydown', e => {
   if (state === 'title') return;
   if (state === 'dialogue') {
     if (!wasDown && (k === 'e' || k === ' ' || k === 'enter')) {
-      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; dialogueText.textContent = currentLine; dialogueContinue.style.display='block'; return; }
+      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; currentLine=fullLine; dialogueText.textContent = fullLine; dialogueContinue.style.display='block'; return; }
       advanceDialogue();
     }
     return;
@@ -588,7 +589,7 @@ document.getElementById('sound-toggle').addEventListener('click', ()=>{
   document.getElementById('sound-toggle').textContent = m ? '🔇' : '🔊';
 });
 document.getElementById('dialogue-box').addEventListener('click', (e)=>{ e.stopPropagation();
-  if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; dialogueText.textContent=currentLine; dialogueContinue.style.display='block'; return; }
+  if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer=null; currentLine=fullLine; dialogueText.textContent=fullLine; dialogueContinue.style.display='block'; return; }
   advanceDialogue();
 });
 document.getElementById('restart-btn').addEventListener('click', ()=>{
@@ -701,6 +702,14 @@ function loop(ts) {
       if (player.pos.distanceTo(crystalMeshes[i].position) < 1.1) {
         collectCrystal(crystalMeshes[i]);
         break;
+      }
+    }
+    // Auto-trigger shrine on proximity
+    if (state === 'playing' && shrineMesh) {
+      const island = getIsland(currentIslandId);
+      const sd = Math.sqrt((player.pos.x-island.shrinePos.x)**2+(player.pos.z-island.shrinePos.z)**2);
+      if (sd < 1.4 && !island.restored && island.crystalCount >= island.totalCrystals) {
+        activateShrine();
       }
     }
   }
