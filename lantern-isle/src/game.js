@@ -272,7 +272,7 @@ function activateShrine() {
 
   const restoreLines = [
     `The island shrine awakens! Light floods the ${island.name}!`,
-    island.npcs[0].restoredLine,
+    island.npcs.length ? island.npcs[0].restoredLine : 'The island glows with restored light!',
     abilityKey ? `New ability unlocked: ${abilityNames[currentIslandId]}!` : 'The Guardian Star grows closer to awakening…'
   ];
 
@@ -533,7 +533,7 @@ function loadIsland(id) {
   buildIsland(id);
   updateAbilityBar();
   const island = getIsland(id);
-  setTimeout(()=>showDialogue(`✨ ${island.name}`, [`You arrive at ${island.name}.`, island.npcs[0].lines[0]], null), 500);
+  setTimeout(()=>showDialogue(`✨ ${island.name}`, [`You arrive at ${island.name}.`, island.npcs.length ? island.npcs[0].lines[0] : 'Explore and find the crystal shards!'], null), 500);
 }
 
 // ── Mobile Controls ───────────────────────────────────────────
@@ -586,7 +586,7 @@ document.getElementById('sound-toggle').addEventListener('click', ()=>{
   const m = toggleMute();
   document.getElementById('sound-toggle').textContent = m ? '🔇' : '🔊';
 });
-document.getElementById('dialogue-box').addEventListener('click', ()=>{
+document.getElementById('dialogue-box').addEventListener('click', (e)=>{ e.stopPropagation();
   if (typewriterTimer) { clearInterval(typewriterTimer); dialogueText.textContent=currentLine; dialogueContinue.style.display='block'; return; }
   advanceDialogue();
 });
@@ -637,6 +637,12 @@ function loop(ts) {
   // Player movement
   if (state === 'playing') {
     player.update(dt, keys, (joystickDir.x||joystickDir.z) ? joystickDir : null);
+    // Bounds: keep player on island (radius ~7.5 world units)
+    const BOUND = 7.2;
+    player.pos.x = Math.max(-BOUND, Math.min(BOUND, player.pos.x));
+    player.pos.z = Math.max(-BOUND, Math.min(BOUND, player.pos.z));
+    player.group.position.x = player.pos.x;
+    player.group.position.z = player.pos.z;
     // Camera follow
     const tx = player.pos.x+12, ty = 12, tz = player.pos.z+12;
     camera.position.x += (tx - camera.position.x) * 4 * dt;
@@ -665,10 +671,17 @@ function loop(ts) {
       shrineMesh.rotation.y += dt * 0.4;
       shrineMesh.position.y = 0.3 + Math.sin(time*1.4)*0.03;
     }
-    // Shadow creep
+    // Shadow creep — grows and slows player when inside
     if (shadowCreepMesh && shadowCreepMesh.userData.growing) {
       shadowCreepMesh.userData.radius = Math.min(shadowCreepMesh.userData.radius + dt*0.04, 4);
       shadowCreepMesh.scale.setScalar(shadowCreepMesh.userData.radius / 1.5);
+      // Check if player is inside creep radius — slow them and flash vignette
+      const scPos = shadowCreepMesh.position;
+      const distToCreep = Math.sqrt(Math.pow(player.pos.x-scPos.x,2)+Math.pow(player.pos.z-scPos.z,2));
+      const inCreep = distToCreep < shadowCreepMesh.userData.radius * 1.0;
+      player.speed = inCreep ? 2.2 : 4.5;
+      const grain = document.getElementById('grain');
+      if (grain) grain.style.opacity = inCreep ? '0.22' : '0.09';
     }
     // Pulse reveal timer
     if (pulseRevealTimer > 0) pulseRevealTimer -= dt;

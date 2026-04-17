@@ -7,6 +7,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script async src="https://vibej.am/2026/widget.js"></script>
+  <script>
+    // Force VibeJam widget link to open in new tab so it doesn't navigate away
+    function patchWidgetLink() {
+      const links = document.querySelectorAll('a[href*="vibej.am"]');
+      links.forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+      if (!links.length) setTimeout(patchWidgetLink, 500);
+    }
+    setTimeout(patchWidgetLink, 500);
+  </script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:#1a1228;overflow:hidden;font-family:'Nunito',sans-serif;width:100vw;height:100vh;}
