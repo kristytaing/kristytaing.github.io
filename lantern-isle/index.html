@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lantern Isle: Guardian Star</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <script async src="https://vibej.am/2026/widget.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#1a1228;overflow:hidden;font-family:'Nunito',sans-serif;width:100vw;height:100vh;}
+    canvas{display:block;}
+    #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+    #hud-crystals{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;
+      background:rgba(240,222,194,0.82);border:1.5px solid #4F4261;border-radius:20px;
+      padding:6px 12px;pointer-events:auto;}
+    .gem{width:22px;height:26px;position:relative;}
+    .gem svg{width:100%;height:100%;}
+    #crystal-label{font-size:12px;font-weight:700;color:#4F4261;margin-left:4px;}
+    #hud-compass{position:absolute;top:12px;right:12px;width:88px;height:88px;pointer-events:auto;}
+    #hud-compass canvas{border-radius:50%;border:3px solid #EBB21A;box-shadow:0 0 0 2px #F0DEC2;}
+    #inventory{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+      display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
+    .inv-slot{width:44px;height:44px;background:rgba(240,222,194,0.8);
+      border:1.5px solid #4F4261;border-radius:6px;display:flex;align-items:center;
+      justify-content:center;font-size:18px;}
+    #dialogue-box{position:absolute;bottom:0;left:0;width:100%;height:22%;
+      background:#F0DEC2;border-top:3px solid #EB6259;display:none;pointer-events:auto;
+      box-shadow:0 -4px 18px rgba(79,66,97,0.18);}
+    #dialogue-floral-left{position:absolute;top:-18px;left:10px;font-size:28px;color:#EB6259;}
+    #dialogue-floral-right{position:absolute;top:-18px;right:10px;font-size:28px;color:#EB6259;}
+    #dialogue-speaker{position:absolute;top:-14px;left:20px;background:#EB6259;
+      color:#F0DEC2;font-weight:700;font-size:12px;padding:3px 12px;border-radius:12px;
+      box-shadow:0 2px 6px rgba(79,66,97,0.25);}
+    #dialogue-text{padding:20px 60px 14px 20px;font-size:14px;line-height:1.7;color:#4F4261;}
+    #dialogue-continue{position:absolute;bottom:12px;right:18px;font-size:18px;
+      color:#EB6259;cursor:pointer;animation:bob 0.6s ease-in-out infinite alternate;}
+    @keyframes bob{from{transform:translateY(0)}to{transform:translateY(5px)}}
+    #map-screen{position:absolute;inset:0;background:rgba(240,222,194,0.97);
+      display:none;flex-direction:column;align-items:center;justify-content:center;
+      pointer-events:auto;z-index:20;}
+    #map-title{font-size:36px;font-weight:800;color:#4F4261;margin-bottom:20px;
+      text-shadow:2px 2px 0 rgba(240,222,194,0.8);}
+    #map-canvas{border:4px solid #D4836A;border-radius:18px;background:#F0DEC2;}
+    #close-map{margin-top:14px;background:#EB6259;color:#F0DEC2;border:none;
+      font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;
+      padding:8px 28px;border-radius:12px;cursor:pointer;pointer-events:auto;}
+    #title-screen{position:absolute;inset:0;background:linear-gradient(180deg,#9B9AE2 0%,#C6C3DC 60%,#F0DEC2 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:30;pointer-events:auto;}
+    #title-screen h1{font-size:42px;font-weight:800;color:#4F4261;text-align:center;
+      line-height:1.2;text-shadow:0 2px 12px rgba(155,154,226,0.5);}
+    #title-screen p{color:#4F4261;font-size:15px;margin-top:8px;opacity:0.8;}
+    #start-btn{margin-top:28px;background:#EB6259;color:#F0DEC2;border:none;
+      font-family:'Nunito',sans-serif;font-size:17px;font-weight:700;
+      padding:12px 36px;border-radius:14px;cursor:pointer;
+      box-shadow:0 4px 14px rgba(235,98,89,0.4);}
+    #start-btn:hover{background:#d4554d;}
+    #sound-toggle{position:absolute;top:12px;right:116px;background:rgba(240,222,194,0.82);
+      border:1.5px solid #4F4261;border-radius:20px;padding:6px 10px;
+      cursor:pointer;pointer-events:auto;font-size:18px;}
+    #ability-bar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;pointer-events:none;}
+    .ability-slot{width:38px;height:38px;background:rgba(240,222,194,0.82);
+      border:1.5px solid #4F4261;border-radius:8px;display:flex;align-items:center;
+      justify-content:center;font-size:16px;position:relative;}
+    .ability-cooldown{position:absolute;inset:0;background:rgba(79,66,97,0.5);
+      border-radius:7px;transform-origin:bottom;transition:transform 0.1s;}
+    #win-screen{position:absolute;inset:0;background:radial-gradient(ellipse at center,#EBB21A 0%,#9B9AE2 60%,#4F4261 100%);
+      display:none;flex-direction:column;align-items:center;justify-content:center;
+      z-index:40;pointer-events:auto;}
+    #win-screen h1{font-size:40px;font-weight:800;color:#F0DEC2;text-align:center;}
+    #win-screen p{color:#F0DEC2;margin-top:10px;font-size:16px;}
+    #restart-btn{margin-top:24px;background:#F0DEC2;color:#4F4261;border:none;
+      font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;
+      padding:10px 30px;border-radius:12px;cursor:pointer;}
+    #grain{position:fixed;inset:0;pointer-events:none;z-index:50;opacity:0.09;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:200px 200px;}
+    #mobile-controls{position:absolute;bottom:0;left:0;width:100%;height:200px;
+      display:none;pointer-events:auto;}
+    #joystick-zone{position:absolute;bottom:20px;left:20px;width:120px;height:120px;
+      border-radius:50%;background:rgba(240,222,194,0.2);border:2px solid rgba(240,222,194,0.4);}
+    #joystick-knob{position:absolute;width:50px;height:50px;border-radius:50%;
+      background:rgba(235,98,89,0.6);top:50%;left:50%;transform:translate(-50%,-50%);}
+    #action-btn{position:absolute;bottom:30px;right:30px;width:70px;height:70px;
+      border-radius:50%;background:rgba(235,98,89,0.7);border:2px solid #F0DEC2;
+      display:flex;align-items:center;justify-content:center;
+      font-size:24px;color:#F0DEC2;font-weight:700;}
+    #map-btn{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+      background:rgba(240,222,194,0.82);border:1.5px solid #4F4261;border-radius:20px;
+      padding:6px 16px;cursor:pointer;pointer-events:auto;font-size:13px;
+      font-family:'Nunito',sans-serif;font-weight:700;color:#4F4261;}
+  </style>
+</head>
+<body>
+<div id="grain"></div>
+<canvas id="game-canvas"></canvas>
+<div id="ui">
+  <div id="title-screen">
+    <h1>✨ Lantern Isle<br>Guardian Star ✨</h1>
+    <p>The Guardian Star awaits the Lantern Bearer…</p>
+    <button id="start-btn">Begin Adventure</button>
+  </div>
+  <div id="hud-crystals" style="display:none;">
+    <div class="gem" id="gem0"></div>
+    <div class="gem" id="gem1"></div>
+    <div class="gem" id="gem2"></div>
+    <div class="gem" id="gem3"></div>
+    <div class="gem" id="gem4"></div>
+    <span id="crystal-label">Crystals 0/5</span>
+  </div>
+  <button id="sound-toggle" style="display:none;">🔊</button>
+  <button id="map-btn" style="display:none;">🗺️ Map</button>
+  <div id="hud-compass" style="display:none;"><canvas id="compass-canvas" width="82" height="82"></canvas></div>
+  <div id="inventory" style="display:none;">
+    <div class="inv-slot">🏮</div>
+    <div class="inv-slot" id="inv1"></div>
+    <div class="inv-slot" id="inv2"></div>
+  </div>
+  <div id="ability-bar" style="display:none;">
+    <div class="ability-slot" id="ab-pulse" title="Lantern Pulse [E]" style="display:none;">💫</div>
+    <div class="ability-slot" id="ab-sprint" title="Sprint [Shift]" style="display:none;">💨</div>
+  </div>
+  <div id="dialogue-box">
+    <div id="dialogue-floral-left">❀</div>
+    <div id="dialogue-floral-right">❀</div>
+    <div id="dialogue-speaker">???</div>
+    <div id="dialogue-text"></div>
+    <div id="dialogue-continue">▼</div>
+  </div>
+  <div id="map-screen">
+    <div id="map-title">✨ World Map ✨</div>
+    <canvas id="map-canvas" width="640" height="400"></canvas>
+    <button id="close-map">Close Map</button>
+  </div>
+  <div id="win-screen">
+    <h1>✨ The Guardian Star<br>is Reawakened! ✨</h1>
+    <p>The Archipelago glows with warmth once more.</p>
+    <button id="restart-btn">Play Again</button>
+  </div>
+</div>
+<div id="mobile-controls" style="display:none;">
+  <div id="joystick-zone"><div id="joystick-knob"></div></div>
+  <div id="action-btn">E</div>
+</div>
+<script type="module" src="src/game.js"></script>
+</body>
+</html>
