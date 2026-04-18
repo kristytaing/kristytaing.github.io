@@ -1376,10 +1376,10 @@ function finishCrystalCollect(tc) {
   score+=100;
   particles.push({x:sx,y:sy-30,vx:0,vy:-2.5,life:1,decay:0.018,r:6,col:P.gold,text:'+100'});
   if(tc.lore) {
-    particles.push({x:sx,y:sy-55,vx:0,vy:-0.8,life:1,decay:0.008,r:0,col:P.plum,text:tc.lore,isLore:true});
+    // Only show popup box — no duplicate floating particle
     const lp=document.getElementById('lore-popup');
     if(lp){lp.textContent=tc.lore;lp.style.opacity='1';lp.style.transform='translateX(-50%) scale(1)';
-      setTimeout(()=>{lp.style.opacity='0';lp.style.transform='translateX(-50%) scale(0.85)';},2800);}
+      setTimeout(()=>{lp.style.opacity='0';lp.style.transform='translateX(-50%) scale(0.85)';},3000);}
   }
   for(let _i=0;_i<8;_i++){const ang=(_i/8)*Math.PI*2;particles.push({x:sx,y:sy-20,vx:Math.cos(ang)*2.5,vy:Math.sin(ang)*2.5-1.5,life:1,decay:0.03,r:4,col:[P.gold,P.lavender,P.pink][_i%3]});}
   const gem=document.getElementById(`g${tc.gemIdx}`);
