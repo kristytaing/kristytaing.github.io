@@ -26,18 +26,25 @@ export const ISLANDS = [
     mapPos: { x: 0.5, y: 0.22 },
     mechanic: 'shadow',
     tiles: buildTiles(0),
-    crystalPositions: [{x:-2,z:-2},{x:3,z:1},{x:-1,z:3},{x:4,z:-3},{x:-4,z:2}],
+    // hidden:true crystals only spawn after their gateNpc quest is resolved
+    crystalPositions: [
+      {x:-2,z:-2}, {x:3,z:1}, {x:-1,z:3},
+      {x:4,z:-3, hidden:true, gateNpc:1},   // unlocked by Fern
+      {x:-4,z:2, hidden:true, gateNpc:2},   // unlocked by Sprite
+    ],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Elder Moss', x:2, z:-1, color:0x6F7E4A,
-        lines:["Ah, young Lantern Bearer! The forest dims each day…","The crystal shards hold the Star's lost light. Seek them!","My old bones feel the shadow creeping closer…"],
+      { name:'Elder Moss', type:'elder', x:2, z:-1, color:0x6F7E4A,
+        lines:["Ah, young Lantern Bearer! The forest dims each day…","The crystal shards hold the Star's lost light. Seek them!","Speak to Fern and Sprite — they know where more shards are hidden."],
         restoredLine:"The light returns! Oh, I can smell the blooms again!" },
-      { name:'Fern', x:-3, z:2, color:0x9B9AE2,
-        lines:["I used to see fireflies every night. Now… nothing.","The glowing orbs — those are the crystal shards!","Be careful of the shadow wisps. Lantern light freezes them."],
-        restoredLine:"It's warm again! Thank you, Lantern Bearer!" },
-      { name:'Sprite', x:3, z:3, color:0xF29FD7,
-        lines:["I'm Sprite! I love sparkly things ✨","Did you know your lantern is SPECIAL? Try pressing E!","The shrine is at the center of the forest. Can you feel it?"],
-        restoredLine:"SPARKLES! SO MANY SPARKLES! You did it!!" },
+      { name:'Fern', type:'wisp', x:-3, z:2, color:0x9B9AE2,
+        lines:["I used to see fireflies every night. Now… nothing.","I hid a shard to keep it safe from the shadow…","It's near the old oak to the east. Take it — you need it more than I do!"],
+        restoredLine:"It's warm again! Thank you, Lantern Bearer!",
+        quest:{ type:'reveal_crystal', crystalIdx:3, done:false } },
+      { name:'Sprite', type:'fairy', x:3, z:3, color:0xF29FD7,
+        lines:["I'm Sprite! I love sparkly things ✨","I buried a shard in the mossy hollow to the west!","Here — I'll show you! *points to hidden shard*"],
+        restoredLine:"SPARKLES! SO MANY SPARKLES! You did it!!",
+        quest:{ type:'reveal_crystal', crystalIdx:4, done:false } },
     ]
   },
   {
@@ -52,18 +59,24 @@ export const ISLANDS = [
     mapPos: { x: 0.22, y: 0.25 },
     mechanic: 'tidal',
     tiles: buildTiles(1),
-    crystalPositions: [{x:-3,z:-1},{x:2,z:2},{x:-2,z:3},{x:4,z:0},{x:0,z:-4}],
+    crystalPositions: [
+      {x:-3,z:-1}, {x:2,z:2}, {x:-2,z:3},
+      {x:4,z:0, hidden:true, gateNpc:1},    // Crab reveals it
+      {x:0,z:-4, hidden:true, gateNpc:2},   // Driftwood reveals it
+    ],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Sandy', x:2, z:-2, color:0xEBB21A,
-        lines:["Welcome to Sunflower Beach! Watch the tides…","Some paths only appear when the tide is low.","Find the tidal altar to control the water level!"],
+      { name:'Sandy', type:'villager', x:2, z:-2, color:0xEBB21A,
+        lines:["Welcome to Sunflower Beach! Watch the tides…","Some paths only appear when the tide is low.","Chat with Crab and Driftwood — they know the tidal secrets."],
         restoredLine:"The sunflowers are blooming again! Oh happy day!" },
-      { name:'Crab', x:-2, z:1, color:0xEB6259,
-        lines:["*click click* Tides go in, tides go out.","Low tide reveals the hidden path to the eastern shard!","*click* You smell like adventure. And lantern oil."],
-        restoredLine:"*happy clicking* The water is warm and golden again!" },
-      { name:'Driftwood', x:3, z:3, color:0xF0DEC2,
-        lines:["I've drifted here from a faraway island.","The Guardian Star once made these waters glow at night.","I hope you can bring that light back…"],
-        restoredLine:"I can see the reflection of stars in the water again!" },
+      { name:'Crab', type:'crab', x:-2, z:1, color:0xEB6259,
+        lines:["*click click* Tides go in, tides go out.","Low tide reveals the hidden path to the eastern shard!","*click* The shard is right under the eastern rock — low tide now!"],
+        restoredLine:"*happy clicking* The water is warm and golden again!",
+        quest:{ type:'reveal_crystal', crystalIdx:3, done:false } },
+      { name:'Driftwood', type:'log', x:3, z:3, color:0xC8A96E,
+        lines:["I've drifted here from a faraway island.","The Guardian Star once made these waters glow at night.","...I think there's a shard buried beneath me. Take it!"],
+        restoredLine:"I can see the reflection of stars in the water again!",
+        quest:{ type:'reveal_crystal', crystalIdx:4, done:false } },
     ]
   },
   {
@@ -78,18 +91,24 @@ export const ISLANDS = [
     mapPos: { x: 0.78, y: 0.25 },
     mechanic: 'heat',
     tiles: buildTiles(2),
-    crystalPositions: [{x:-2,z:-3},{x:3,z:2},{x:-3,z:1},{x:2,z:-1},{x:0,z:4}],
+    crystalPositions: [
+      {x:-2,z:-3}, {x:3,z:2}, {x:-3,z:1},
+      {x:2,z:-1, hidden:true, gateNpc:1},   // Blossom reveals it
+      {x:0,z:4, hidden:true, gateNpc:2},    // Ashrock reveals it
+    ],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Ember', x:2, z:-2, color:0xEB6259,
-        lines:["The lava cracks appeared when the Star shattered.","Find water jars near the pond to cool the lava paths.","Three cooling steps open the way to the final shard!"],
+      { name:'Ember', type:'spirit', x:2, z:-2, color:0xEB6259,
+        lines:["The lava cracks appeared when the Star shattered.","Find water jars near the pond to cool the lava paths.","Speak to Blossom and Ashrock — they guard hidden shards."],
         restoredLine:"The fire flowers are beautiful again, not dangerous!" },
-      { name:'Blossom', x:-3, z:2, color:0xF29FD7,
-        lines:["Cherry petals used to dance here year-round…","Now they only fall near the sacred sakura tree.","Your lantern light makes the petals glow pink ✨"],
-        restoredLine:"Look! The petals are falling again! Just like before!" },
-      { name:'Ashrock', x:3, z:3, color:0x4F4261,
-        lines:["I am Ashrock. I have watched this cove for centuries.","The lava was once gentle warmth. Now it burns with grief.","Restore the shrine, young one. The cove remembers beauty."],
-        restoredLine:"…The grief lifts. Thank you, Lantern Bearer. Truly." },
+      { name:'Blossom', type:'fairy', x:-3, z:2, color:0xF29FD7,
+        lines:["Cherry petals used to dance here year-round…","I kept a shard safe inside the sakura tree hollow.","Here — the shard is yours. I trust you, Lantern Bearer ✨"],
+        restoredLine:"Look! The petals are falling again! Just like before!",
+        quest:{ type:'reveal_crystal', crystalIdx:3, done:false } },
+      { name:'Ashrock', type:'rock', x:3, z:3, color:0x6A6A6A,
+        lines:["I am Ashrock. I have watched this cove for centuries.","The lava was once gentle warmth. Now it burns with grief.","*rumbles* ...Beneath my base lies a shard. I yield it to you."],
+        restoredLine:"…The grief lifts. Thank you, Lantern Bearer. Truly.",
+        quest:{ type:'reveal_crystal', crystalIdx:4, done:false } },
     ]
   },
   {
@@ -107,15 +126,15 @@ export const ISLANDS = [
     crystalPositions: [{x:-2,z:-2},{x:3,z:1},{x:-1,z:3},{x:4,z:-2},{x:0,z:-3}],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Baker Bun', x:2, z:-2, color:0xF0DEC2,
+      { name:'Baker Bun', type:'villager', x:2, z:-2, color:0xF0DEC2,
         lines:["Oh dear! My little cat Mochi ran off again!","If you find Mochi, I'll give you the crystal shard I found!","Mochi has orange fur and loves sparkly things… hmm…"],
         quest: { type:'find_cat', reward: 0, done: false },
         restoredLine:"Mochi is safe AND the light is back! This is the best day!" },
-      { name:'Gardener', x:-3, z:1, color:0x6F7E4A,
+      { name:'Gardener', type:'elder', x:-3, z:1, color:0x6F7E4A,
         lines:["My garden is wilting without the Star's warmth…","Could you bring me a water jar from the well? Please?","The well is just to the east. The jar should be there."],
         quest: { type:'fetch_water', reward: 1, done: false },
         restoredLine:"My flowers! They're blooming! I'm going to cry happy tears!" },
-      { name:'Elder Owl', x:0, z:3, color:0x4F4261,
+      { name:'Elder Owl', type:'owl', x:0, z:3, color:0x4F4261,
         lines:["Hoo hoo. I am the keeper of the village lore.","The crystal shards respond to kindness, young one.","Help the baker and the gardener. Then come to me last."],
         quest: { type:'elder_final', reward: 2, done: false, requires:['find_cat','fetch_water'] },
         restoredLine:"Hoo hoo… The warmth returns. The Star remembers us." },
@@ -133,18 +152,24 @@ export const ISLANDS = [
     mapPos: { x: 0.65, y: 0.6 },
     mechanic: 'echo',
     tiles: buildTiles(4),
-    crystalPositions: [{x:-3,z:-2},{x:2,z:3},{x:-2,z:2},{x:3,z:-1},{x:0,z:-3}],
+    crystalPositions: [
+      {x:-3,z:-2}, {x:2,z:3}, {x:-2,z:2},
+      {x:3,z:-1, hidden:true, gateNpc:1},   // Stalagmite reveals
+      {x:0,z:-3, hidden:true, gateNpc:2},   // Echo reveals
+    ],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Glimmer', x:2, z:-2, color:0xC6C3DC,
-        lines:["Shh… sound travels far in here.","Press E to send a lantern echo — it reveals hidden ledges!","The deepest shard is in a chamber only the echo can find."],
+      { name:'Glimmer', type:'wisp', x:2, z:-2, color:0xC6C3DC,
+        lines:["Shh… sound travels far in here.","Press Space to send a lantern echo — it reveals hidden ledges!","Speak to Stalagmite and Echo — they know the cave's secrets."],
         restoredLine:"The crystals are singing again! Do you hear it?" },
-      { name:'Stalagmite', x:-3, z:2, color:0x9B9AE2,
-        lines:["I have grown here for ten thousand years.","The bioluminescent pools used to light this cave naturally.","They dimmed when the Star fell. Your lantern helps."],
-        restoredLine:"I glow again! After all these centuries… I glow!" },
-      { name:'Echo', x:3, z:3, color:0xF29FD7,
-        lines:["*whispers* I am the cave's echo given form…","Every sound here remembers itself for a moment.","Use your lantern pulse wisely. The cave will answer."],
-        restoredLine:"*resonating warmth* The cave sings your name, Lantern Bearer." },
+      { name:'Stalagmite', type:'rock', x:-3, z:2, color:0x9B9AE2,
+        lines:["I have grown here for ten thousand years.","The bioluminescent pools used to light this cave naturally.","*cracks open* A shard has been inside me all along. Take it."],
+        restoredLine:"I glow again! After all these centuries… I glow!",
+        quest:{ type:'reveal_crystal', crystalIdx:3, done:false } },
+      { name:'Echo', type:'spirit', x:3, z:3, color:0xF29FD7,
+        lines:["*whispers* I am the cave's echo given form…","Every sound here remembers itself for a moment.","*resonates* A shard rests in the deep chamber. I will guide you. Follow me!"],
+        restoredLine:"*resonating warmth* The cave sings your name, Lantern Bearer.",
+        quest:{ type:'reveal_crystal', crystalIdx:4, done:false } },
     ]
   },
   {
@@ -159,18 +184,24 @@ export const ISLANDS = [
     mapPos: { x: 0.25, y: 0.75 },
     mechanic: 'wind',
     tiles: buildTiles(5),
-    crystalPositions: [{x:-2,z:-2},{x:3,z:1},{x:-3,z:2},{x:2,z:-3},{x:0,z:4}],
+    crystalPositions: [
+      {x:-2,z:-2}, {x:3,z:1}, {x:-3,z:2},
+      {x:2,z:-3, hidden:true, gateNpc:1},   // Windkeeper reveals
+      {x:0,z:4, hidden:true, gateNpc:2},    // Ancient Keeper reveals
+    ],
     shrinePos: {x:0,z:0},
     npcs: [
-      { name:'Zephyr', x:2, z:-2, color:0xC6C3DC,
-        lines:["The wind carries memories of the Guardian Star here.","Activate the windmills to redirect the gusts — they open gates!","The final shard is at the peak, past three windmill gates."],
+      { name:'Zephyr', type:'wisp', x:2, z:-2, color:0xC6C3DC,
+        lines:["The wind carries memories of the Guardian Star here.","Activate the windmills to redirect the gusts — they open gates!","Talk to Windkeeper and the Ancient Keeper. They hold the last shards."],
         restoredLine:"The wind smells of lavender again. It smells like home." },
-      { name:'Windkeeper', x:-3, z:1, color:0x9B9AE2,
-        lines:["I have tended these windmills for generations.","The wind stopped the day the Star fell. The mills stood still.","Now you've come. Perhaps the mills will turn again."],
-        restoredLine:"*tearfully* They're turning! Oh, listen to them sing!" },
-      { name:'Ancient Keeper', x:0, z:3, color:0x4F4261,
-        lines:["Young Lantern Bearer… I have waited so long.","The prophecy spoke of one who would carry light through six islands.","This is the final island. The Guardian Star awaits you at the shrine.","Place the crystals. Let the light return. You have earned this."],
-        restoredLine:"*smiles softly* The Star shines. And so do you, dear child." },
+      { name:'Windkeeper', type:'elder', x:-3, z:1, color:0x9B9AE2,
+        lines:["I have tended these windmills for generations.","The wind stopped the day the Star fell. The mills stood still.","*exhales* The last shard… I've kept it safe. Here, take it!"],
+        restoredLine:"*tearfully* They're turning! Oh, listen to them sing!",
+        quest:{ type:'reveal_crystal', crystalIdx:3, done:false } },
+      { name:'Ancient Keeper', type:'owl', x:0, z:3, color:0x4F4261,
+        lines:["Young Lantern Bearer… I have waited so long.","The prophecy spoke of one who would carry light through six islands.","This is the final island. The Guardian Star awaits you at the shrine.","*offers shard* Place the crystals. Let the light return. You have earned this."],
+        restoredLine:"*smiles softly* The Star shines. And so do you, dear child.",
+        quest:{ type:'reveal_crystal', crystalIdx:4, done:false } },
     ]
   }
 ];
