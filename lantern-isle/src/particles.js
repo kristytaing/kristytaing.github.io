@@ -98,6 +98,24 @@ export class ParticleSystem {
     }
   }
 
+  // Footstep dust — tiny ground puff when player steps
+  addFootstepDust(x, z) {
+    const count = 4;
+    const { pts, pos, count: c } = this._makePoints(count, 0xD4C8A8, 0.05);
+    const vels = [];
+    for (let i = 0; i < c; i++) {
+      pos[i*3] = x + (Math.random()-0.5)*0.18;
+      pos[i*3+1] = 0.06;
+      pos[i*3+2] = z + (Math.random()-0.5)*0.18;
+      const angle = Math.random()*Math.PI*2;
+      const spd = Math.random()*0.4+0.1;
+      vels.push(Math.cos(angle)*spd, Math.random()*0.3+0.05, Math.sin(angle)*spd);
+    }
+    pts.geometry.attributes.position.needsUpdate = true;
+    this.systems.push({ pts, pos, count:c, type:'dust', vels, life:0.5, t:0 });
+    return pts;
+  }
+
   update(dt) {
     const toRemove = [];
     for (let s of this.systems) {
@@ -129,6 +147,17 @@ export class ParticleSystem {
           s.pos[i*3]   += s.vels[i*3]   * dt;
           s.pos[i*3+1] += s.vels[i*3+1] * dt - 2*dt; // gravity
           s.pos[i*3+2] += s.vels[i*3+2] * dt;
+        }
+        s.pts.geometry.attributes.position.needsUpdate = true;
+        if (s.t >= s.life) toRemove.push(s);
+      } else if (s.type === 'dust') {
+        s.t += dt;
+        const life = 1 - s.t/s.life;
+        s.pts.material.opacity = Math.max(0, life * 0.55);
+        for (let i = 0; i < s.count; i++) {
+          s.pos[i*3]   += s.vels[i*3]   * dt * (1 - s.t/s.life);
+          s.pos[i*3+1] += s.vels[i*3+1] * dt * 0.3;
+          s.pos[i*3+2] += s.vels[i*3+2] * dt * (1 - s.t/s.life);
         }
         s.pts.geometry.attributes.position.needsUpdate = true;
         if (s.t >= s.life) toRemove.push(s);

@@ -14,6 +14,7 @@ export class Player {
     this.group = new THREE.Group();
     this.bobTime = 0;
     this.footstepTimer = 0;
+    this.footstepInterval = 0.32; // seconds between dust puffs
     this.isMoving = false;
     this.hairLag = [];
     // Abilities
@@ -61,12 +62,10 @@ export class Player {
     // Hair — flowing brown, several strands
     this.hairGroup = new THREE.Group();
     const hairMat = new THREE.MeshLambertMaterial({ color: 0x7B4F2E });
-    // Main hair cap
     const capGeo = new THREE.SphereGeometry(0.23, 10, 8, 0, Math.PI*2, 0, Math.PI*0.55);
     this.hairCap = new THREE.Mesh(capGeo, hairMat);
     this.hairCap.position.y = 0.56;
     this.hairGroup.add(this.hairCap);
-    // Side strands (flat planes)
     for (let s = 0; s < 3; s++) {
       const strandGeo = new THREE.PlaneGeometry(0.08, 0.28 + s*0.06);
       const strand = new THREE.Mesh(strandGeo, hairMat);
@@ -75,7 +74,6 @@ export class Player {
       strand.rotation.z = side * 0.15;
       this.hairGroup.add(strand);
     }
-    // Back hair (trailing)
     const backGeo = new THREE.PlaneGeometry(0.3, 0.38);
     this.hairBack = new THREE.Mesh(backGeo, hairMat);
     this.hairBack.position.set(0, 0.42, -0.2);
@@ -90,7 +88,6 @@ export class Player {
     this.scarf.position.y = 0.38;
     this.scarf.rotation.x = Math.PI/2;
     g.add(this.scarf);
-    // Scarf tail
     const tailGeo = new THREE.BoxGeometry(0.04, 0.14, 0.04);
     this.scarfTail = new THREE.Mesh(tailGeo, scarfMat);
     this.scarfTail.position.set(0.1, 0.3, 0.05);
@@ -110,13 +107,11 @@ export class Player {
     this.lantern = new THREE.Mesh(lanternGeo, lanternMat);
     this.lantern.position.set(0.22, 0.38, 0.08);
     g.add(this.lantern);
-    // Lantern handle
     const handleGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.12, 6);
     const handleMat = new THREE.MeshLambertMaterial({ color: 0x8B5E2A });
     const handle = new THREE.Mesh(handleGeo, handleMat);
     handle.position.set(0.22, 0.46, 0.08);
     g.add(handle);
-    // Lantern light
     this.lanternLight = new THREE.PointLight(PALETTE.goldenYellowN, 0.8, 5);
     this.lanternLight.position.set(0.22, 0.38, 0.08);
     g.add(this.lanternLight);
@@ -130,28 +125,34 @@ export class Player {
     g.add(this.shadow);
   }
 
+  // Returns true when a footstep dust puff should be emitted
   update(dt, keys, isoDir) {
     this.bobTime += dt;
-    // Movement
     let dx = 0, dz = 0;
     if (keys['w']||keys['arrowup']) dz -= 1;
     if (keys['s']||keys['arrowdown']) dz += 1;
     if (keys['a']||keys['arrowleft']) dx -= 1;
     if (keys['d']||keys['arrowright']) dx += 1;
-    // Mobile joystick input
     if (isoDir) { dx = isoDir.x; dz = isoDir.z; }
     this.isMoving = dx !== 0 || dz !== 0;
 
     let spd = this.speed;
     if (this.sprintActive) spd *= 1.7;
 
+    let emitDust = false;
     if (this.isMoving) {
       const len = Math.sqrt(dx*dx+dz*dz);
       this.pos.x += (dx/len) * spd * dt;
       this.pos.z += (dz/len) * spd * dt;
       this.facing = Math.atan2(dx, dz);
-      // Footstep timer
+      // Footstep dust timer
       this.footstepTimer -= dt;
+      if (this.footstepTimer <= 0) {
+        this.footstepTimer = this.footstepInterval / (this.sprintActive ? 1.7 : 1.0);
+        emitDust = true;
+      }
+    } else {
+      this.footstepTimer = 0;
     }
 
     // Sprint
@@ -177,19 +178,16 @@ export class Player {
     this.group.position.y = bob;
     this.group.rotation.y = this.facing;
     this.hairGroup.rotation.z = hairSway;
-    // Hair trails when moving
     if (this.isMoving) this.hairBack.rotation.x = 0.5;
     else this.hairBack.rotation.x = 0.3;
-    // Scarf trail
     this.scarfTail.rotation.z = this.isMoving ? 0.3 : 0.0;
-    // Boot walk animation
     const walkBob = this.isMoving ? Math.sin(this.bobTime * 6) * 0.04 : 0;
     this.bootL.position.y = 0.04 + walkBob;
     this.bootR.position.y = 0.04 - walkBob;
-    // Lantern glow oscillation
     this.lanternLight.intensity = 0.8 + Math.sin(this.bobTime * 1.2) * 0.15;
-    // Lantern swing
     this.lantern.position.y = 0.38 + Math.sin(this.bobTime*3)*0.02;
+
+    return emitDust;
   }
 
   activatePulse() {

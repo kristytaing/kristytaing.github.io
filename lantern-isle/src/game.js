@@ -6,7 +6,8 @@ import { PALETTE, ISLANDS, getIsland } from './world.js';
 import { Player } from './player.js';
 import { ParticleSystem } from './particles.js';
 import { initAudio, startExploreMusic, sfxCrystalCollect, sfxLanternPulse,
-         sfxFootstep, sfxDialogue, sfxShrine, sfxClick, sfxWin, toggleMute, isMuted } from './audio.js';
+         sfxFootstep, sfxDialogue, sfxShrine, sfxClick, sfxWin, toggleMute, isMuted,
+         setIslandAudio } from './audio.js';
 
 // ── State ────────────────────────────────────────────────────
 let state = 'title'; // title | playing | dialogue | map | win
@@ -31,12 +32,28 @@ const camera = new THREE.OrthographicCamera(-camD*aspect, camD*aspect, camD, -ca
 camera.position.set(12, 12, 12);
 camera.lookAt(0, 0, 0);
 
+// ── Camera shake ──────────────────────────────────────────────
+let shakeTimer = 0, shakeIntensity = 0;
+
 // ── Scene objects ─────────────────────────────────────────────
 let player, particles, islandMeshes = [], crystalMeshes = [], npcMeshes = [], shrineMesh;
 let crystalOrbits = [], shadowCreep, shadowCreepMesh;
 let questState = { find_cat: false, fetch_water: false };
 let inventoryItems = [];
 let pulseRevealTimer = 0;
+
+// ── Guardian Star ─────────────────────────────────────────────
+let guardianStarMesh = null, guardianStarLight = null, guardianStarGlowMesh = null;
+let guardianStarAngle = 0;
+
+// ── Shrine beam ───────────────────────────────────────────────
+let shrinBeamMesh = null;
+
+// ── Combo crystal ─────────────────────────────────────────────
+let crystalComboTimestamps = [];
+
+// ── Mobile proximity rings ────────────────────────────────────
+let proximityRingMeshes = []; // {mesh, target, pulsing}
 
 // ── Dialogue ──────────────────────────────────────────────────
 const dialogueBox  = document.getElementById('dialogue-box');
@@ -67,6 +84,118 @@ function showHUD(show) {
   document.getElementById('ability-bar').style.display = show ? 'flex' : 'none';
 }
 
+// ── Save / Load ───────────────────────────────────────────────
+function saveGame() {
+  try {
+    const data = {
+      currentIslandId,
+      islands: ISLANDS.map(i => ({ unlocked: i.unlocked, restored: i.restored, crystalCount: i.crystalCount }))
+    };
+    localStorage.setItem('lanternIsle_save', JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('lanternIsle_save');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    data.islands.forEach((d, i) => {
+      if (ISLANDS[i]) {
+        ISLANDS[i].unlocked = d.unlocked;
+        ISLANDS[i].restored = d.restored;
+        ISLANDS[i].crystalCount = d.crystalCount;
+      }
+    });
+    return data.currentIslandId || 0;
+  } catch(e) { return false; }
+}
+
+// ── Island fade transition ────────────────────────────────────
+const fadeOverlay = document.getElementById('fade-overlay');
+function fadeOut(cb) {
+  fadeOverlay.style.transition = 'opacity 0.4s ease';
+  fadeOverlay.style.opacity = '1';
+  setTimeout(cb, 420);
+}
+function fadeIn() {
+  fadeOverlay.style.transition = 'opacity 0.5s ease';
+  setTimeout(() => { fadeOverlay.style.opacity = '0'; }, 60);
+}
+
+// ── Floating [E] prompt ───────────────────────────────────────
+const ePrompt = document.getElementById('e-prompt');
+function updateEPrompt() {
+  if (state !== 'playing' || !player) { ePrompt.style.display = 'none'; return; }
+  const pp = player.pos;
+  const island = getIsland(currentIslandId);
+  let nearTarget = null, minDist = Infinity;
+
+  crystalMeshes.forEach(cm => {
+    const d = pp.distanceTo(cm.position);
+    if (d < 1.8 && d < minDist) { minDist = d; nearTarget = cm.position.clone(); }
+  });
+  npcMeshes.forEach(nm => {
+    const d = pp.distanceTo(nm.position);
+    if (d < 1.8 && d < minDist) { minDist = d; nearTarget = nm.position.clone().add(new THREE.Vector3(0, 0.6, 0)); }
+  });
+  const shrPos = new THREE.Vector3(island.shrinePos.x, 0.6, island.shrinePos.z);
+  const sd = pp.distanceTo(shrPos);
+  if (sd < 1.8 && sd < minDist) { minDist = sd; nearTarget = shrPos.clone().add(new THREE.Vector3(0, 0.4, 0)); }
+
+  if (!nearTarget) { ePrompt.style.display = 'none'; return; }
+
+  // Project world pos to screen
+  const projected = nearTarget.clone().project(camera);
+  const hw = window.innerWidth / 2, hh = window.innerHeight / 2;
+  const sx = projected.x * hw + hw;
+  const sy = -projected.y * hh + hh;
+  ePrompt.style.display = 'block';
+  ePrompt.style.left = sx + 'px';
+  ePrompt.style.top = (sy - 36) + 'px';
+}
+
+// ── Guardian Star ─────────────────────────────────────────────
+function buildGuardianStar() {
+  if (guardianStarMesh) { scene.remove(guardianStarMesh); scene.remove(guardianStarLight); if (guardianStarGlowMesh) scene.remove(guardianStarGlowMesh); }
+  const restoredCount = ISLANDS.filter(i => i.restored).length;
+  const brightness = 0.2 + restoredCount * 0.16;
+  const geo = new THREE.IcosahedronGeometry(0.22 + restoredCount * 0.04, 1);
+  const mat = new THREE.MeshLambertMaterial({
+    color: 0xFFFFCC,
+    emissive: 0xFFFF88,
+    emissiveIntensity: brightness
+  });
+  guardianStarMesh = new THREE.Mesh(geo, mat);
+  guardianStarMesh.position.set(0, 15, 0);
+  scene.add(guardianStarMesh);
+  // Glow corona
+  const glowGeo = new THREE.IcosahedronGeometry(0.38 + restoredCount * 0.06, 0);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0.18, depthWrite: false });
+  guardianStarGlowMesh = new THREE.Mesh(glowGeo, glowMat);
+  guardianStarGlowMesh.position.set(0, 15, 0);
+  scene.add(guardianStarGlowMesh);
+  // Star light
+  guardianStarLight = new THREE.PointLight(0xFFFFCC, brightness * 0.6, 40);
+  guardianStarLight.position.set(0, 15, 0);
+  scene.add(guardianStarLight);
+}
+
+// ── Shrine beam ───────────────────────────────────────────────
+function buildShrineBeam(island) {
+  if (shrinBeamMesh) { scene.remove(shrinBeamMesh); shrinBeamMesh = null; }
+  if (island.crystalCount < island.totalCrystals) return;
+  const geo = new THREE.CylinderGeometry(0.08, 0.28, 12, 8, 1, true);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xFFDD55, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+  shrinBeamMesh = new THREE.Mesh(geo, mat);
+  shrinBeamMesh.position.set(island.shrinePos.x, 6, island.shrinePos.z);
+  scene.add(shrinBeamMesh);
+}
+
+function removeShrineBeam() {
+  if (shrinBeamMesh) { scene.remove(shrinBeamMesh); shrinBeamMesh = null; }
+}
+
 // ── Build Island ──────────────────────────────────────────────
 function buildIsland(islandId) {
   // Clear previous
@@ -75,6 +204,10 @@ function buildIsland(islandId) {
   npcMeshes.forEach(m => scene.remove(m));
   if (shrineMesh) scene.remove(shrineMesh);
   if (shadowCreepMesh) scene.remove(shadowCreepMesh);
+  removeShrineBeam();
+  // Remove old proximity rings
+  proximityRingMeshes.forEach(r => scene.remove(r.mesh));
+  proximityRingMeshes = [];
   if (particles) particles.clearAll();
   crystalOrbits = [];
   islandMeshes = []; crystalMeshes = []; npcMeshes = [];
@@ -139,6 +272,16 @@ function buildIsland(islandId) {
     const cl = new THREE.PointLight(PALETTE.softPinkN, 0.5, 2.5);
     cl.position.set(cp.x, 0.5, cp.z);
     scene.add(cl); islandMeshes.push(cl);
+    // Mobile proximity ring
+    if (isMobile) {
+      const ringGeo = new THREE.RingGeometry(0.36, 0.44, 24);
+      const ringMat = new THREE.MeshBasicMaterial({ color: PALETTE.softPinkN, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI/2;
+      ring.position.set(cp.x, 0.05, cp.z);
+      scene.add(ring);
+      proximityRingMeshes.push({ mesh: ring, target: new THREE.Vector3(cp.x, 0, cp.z), phase: Math.random()*Math.PI*2 });
+    }
   });
 
   // Shrine
@@ -152,6 +295,20 @@ function buildIsland(islandId) {
   shrLight.position.set(island.shrinePos.x, 1, island.shrinePos.z);
   scene.add(shrLight); islandMeshes.push(shrLight);
 
+  // Mobile shrine proximity ring
+  if (isMobile) {
+    const sRingGeo = new THREE.RingGeometry(0.5, 0.6, 24);
+    const sRingMat = new THREE.MeshBasicMaterial({ color: PALETTE.goldenYellowN, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+    const sRing = new THREE.Mesh(sRingGeo, sRingMat);
+    sRing.rotation.x = -Math.PI/2;
+    sRing.position.set(island.shrinePos.x, 0.05, island.shrinePos.z);
+    scene.add(sRing);
+    proximityRingMeshes.push({ mesh: sRing, target: new THREE.Vector3(island.shrinePos.x, 0, island.shrinePos.z), phase: 0 });
+  }
+
+  // Shrine beam if crystals ready
+  buildShrineBeam(island);
+
   // NPCs
   island.npcs.forEach((npc, ni) => {
     const nGeo = new THREE.CapsuleGeometry(0.14, 0.22, 4, 8);
@@ -160,8 +317,16 @@ function buildIsland(islandId) {
     nMesh.position.set(npc.x, 0.36, npc.z);
     nMesh.userData = { npcIdx: ni, bobBase: 0.36, bobOffset: Math.random()*Math.PI*2 };
     scene.add(nMesh); npcMeshes.push(nMesh);
-    // Name float indicator
-    // (simplified — shown in dialogue only)
+    // Mobile NPC proximity ring
+    if (isMobile) {
+      const nRingGeo = new THREE.RingGeometry(0.28, 0.36, 20);
+      const nRingMat = new THREE.MeshBasicMaterial({ color: npc.color, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+      const nRing = new THREE.Mesh(nRingGeo, nRingMat);
+      nRing.rotation.x = -Math.PI/2;
+      nRing.position.set(npc.x, 0.05, npc.z);
+      scene.add(nRing);
+      proximityRingMeshes.push({ mesh: nRing, target: new THREE.Vector3(npc.x, 0, npc.z), phase: Math.random()*Math.PI*2 });
+    }
   });
 
   // Shadow Creep
@@ -173,6 +338,9 @@ function buildIsland(islandId) {
   shadowCreepMesh.userData = { radius: 0.5, growing: !island.restored };
   scene.add(shadowCreepMesh);
 
+  // Guardian star (rebuilt per island to update brightness)
+  buildGuardianStar();
+
   // Particles per biome
   particles.addAmbientMotes(isMobile ? 60 : 120);
   if (islandId === 2) particles.addPetals(isMobile?20:40, PALETTE.softPinkN);
@@ -181,6 +349,9 @@ function buildIsland(islandId) {
 
   updateCrystalHUD();
   drawCompass(island);
+
+  // Per-island audio modulation
+  if (audioReady) setIslandAudio(islandId);
 }
 
 // ── Dialogue System ───────────────────────────────────────────
@@ -191,6 +362,7 @@ function showDialogue(speaker, lines, callback) {
   dialogueCallback = callback || null;
   dialogueSpeaker.textContent = speaker;
   dialogueBox.style.display = 'block';
+  ePrompt.style.display = 'none';
   advanceDialogue();
 }
 
@@ -231,19 +403,61 @@ function collectCrystal(mesh) {
   const island = getIsland(currentIslandId);
   const idx = mesh.userData.crystalIdx;
   island.crystalCount++;
-  // Remove mesh
+  // Combo bonus
+  const now = performance.now();
+  crystalComboTimestamps.push(now);
+  crystalComboTimestamps = crystalComboTimestamps.filter(t => now - t < 5000);
+  if (crystalComboTimestamps.length >= 3) {
+    showFloatingText('✨ Crystal Surge!', mesh.position.x, mesh.position.z, '#EBB21A');
+    crystalComboTimestamps = [];
+  }
+  // Remove mesh + its proximity ring
   scene.remove(mesh);
   const ci = crystalMeshes.indexOf(mesh);
   if (ci >= 0) crystalMeshes.splice(ci, 1);
+  // Remove matching proximity ring
+  const mpos = mesh.position;
+  for (let ri = proximityRingMeshes.length-1; ri >= 0; ri--) {
+    const r = proximityRingMeshes[ri];
+    if (r.target.distanceTo(mpos) < 0.5) {
+      scene.remove(r.mesh);
+      proximityRingMeshes.splice(ri, 1);
+      break;
+    }
+  }
   // Burst particles
   particles.addBurst(mesh.position.x, mesh.position.y, mesh.position.z, PALETTE.softPinkN, 25);
   particles.addPulseRing(mesh.position.x, 0.1, mesh.position.z);
   sfxCrystalCollect();
-  // Scale pop on shrine if all collected
   updateCrystalHUD();
+  // Show shrine beam when all collected
   if (island.crystalCount >= island.totalCrystals) {
+    buildShrineBeam(island);
     setTimeout(()=>showDialogue('✨ Shrine', ['All crystal shards gathered! Bring them to the shrine at the center of the island!'], null), 600);
   }
+  saveGame();
+}
+
+// ── Floating text ─────────────────────────────────────────────
+function showFloatingText(text, wx, wz, color='#ffffff') {
+  const el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = `position:fixed;font-family:Nunito,sans-serif;font-size:16px;font-weight:800;
+    color:${color};text-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;z-index:60;
+    transition:transform 1.2s ease, opacity 1.2s ease;`;
+  // Project world position to screen
+  const v = new THREE.Vector3(wx, 1.2, wz).project(camera);
+  const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+  const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+  el.style.left = (sx - 60) + 'px';
+  el.style.top = sy + 'px';
+  el.style.opacity = '1';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transform = 'translateY(-40px)';
+    el.style.opacity = '0';
+  });
+  setTimeout(() => el.remove(), 1300);
 }
 
 // ── Shrine Restoration ────────────────────────────────────────
@@ -257,11 +471,16 @@ function activateShrine() {
   }
   island.restored = true;
   sfxShrine();
+  removeShrineBeam();
   particles.addRestorationBurst(island.shrinePos.x, 1, island.shrinePos.z);
+  // Screen shake
+  shakeTimer = 0.35; shakeIntensity = 0.18;
   // Light up shrine
   if (shrineMesh) { shrineMesh.material.emissiveIntensity = 0.9; }
   // Stop shadow creep
   if (shadowCreepMesh) shadowCreepMesh.userData.growing = false;
+  // Update Guardian Star brightness
+  buildGuardianStar();
 
   // Grant ability
   const abilityMap = ['pulse','sprint','heatWard','whistle','sonar'];
@@ -279,12 +498,12 @@ function activateShrine() {
   ];
 
   showDialogue('✨ Restoration!', restoreLines, () => {
-    // Unlock next island
+    saveGame();
+    // Unlock next island — fade transition
     if (currentIslandId + 1 < ISLANDS.length) {
       ISLANDS[currentIslandId+1].unlocked = true;
       showDialogue('✨ Map Updated', [`A new island has appeared on your map: ${ISLANDS[currentIslandId+1].name}!`, 'Press M or tap the Map button to navigate.'], null);
     } else {
-      // Final island — trigger win!
       triggerWin();
     }
   });
@@ -299,6 +518,7 @@ function triggerWin() {
   setTimeout(() => particles.addRestorationBurst(0, 2, 0), 800);
   document.getElementById('win-screen').style.display = 'flex';
   showHUD(false);
+  localStorage.removeItem('lanternIsle_save');
 }
 
 // ── Ability Bar ───────────────────────────────────────────────
@@ -314,20 +534,16 @@ function drawCompass(island) {
   const ctx = cc.getContext('2d');
   const w = cc.width, h = cc.height, cx = w/2, cy = h/2, r = w/2-4;
   ctx.clearRect(0,0,w,h);
-  // Background circle
   ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
   ctx.fillStyle = PALETTE.warmCream; ctx.fill();
   ctx.strokeStyle = PALETTE.goldenYellow; ctx.lineWidth = 3; ctx.stroke();
-  // Simple terrain preview
   ctx.fillStyle = PALETTE.oliveGreen;
   ctx.beginPath(); ctx.ellipse(cx,cy,r*0.55,r*0.45,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle = '#8AAABB';
   ctx.beginPath(); ctx.arc(cx+r*0.3,cy-r*0.15,r*0.18,0,Math.PI*2); ctx.fill();
-  // Cardinal directions
   ctx.font = 'bold 10px Nunito,sans-serif'; ctx.fillStyle = PALETTE.deepPlum; ctx.textAlign='center';
   ctx.fillText('N',cx,cy-r+14); ctx.fillText('S',cx,cy+r-4);
   ctx.fillText('E',cx+r-4,cy+4); ctx.fillText('W',cx-r+4,cy+4);
-  // Player dot
   ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2);
   ctx.fillStyle = PALETTE.coralRed; ctx.fill();
 }
@@ -338,18 +554,14 @@ function drawWorldMap() {
   const ctx = mc.getContext('2d');
   const W = mc.width, H = mc.height;
   ctx.clearRect(0,0,W,H);
-  // Parchment background
   ctx.fillStyle = PALETTE.warmCream; ctx.fillRect(0,0,W,H);
-  // Decorative border
   ctx.strokeStyle = '#D4836A'; ctx.lineWidth = 6;
   ctx.strokeRect(8,8,W-16,H-16);
   ctx.strokeStyle = '#EB6259'; ctx.lineWidth = 2;
   ctx.strokeRect(14,14,W-28,H-28);
-  // Title
   ctx.font = 'bold 28px Nunito,sans-serif'; ctx.fillStyle = PALETTE.deepPlum;
   ctx.textAlign = 'center'; ctx.fillText('✨ World Map ✨', W/2, 44);
 
-  // Draw connections (dotted paths)
   const islandPositions = ISLANDS.map(i=>({x:i.mapPos.x*W, y:i.mapPos.y*H}));
   const connections = [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5]];
   ctx.setLineDash([4,8]); ctx.strokeStyle = PALETTE.deepPlum; ctx.lineWidth=1.5; ctx.globalAlpha=0.5;
@@ -361,44 +573,33 @@ function drawWorldMap() {
   });
   ctx.setLineDash([]); ctx.globalAlpha=1;
 
-  // Draw islands
   ISLANDS.forEach((island, i) => {
     const px = island.mapPos.x * W, py = island.mapPos.y * H;
     const unlocked = island.unlocked;
     const restored = island.restored;
-
     ctx.save();
     if (!unlocked) ctx.globalAlpha = 0.38;
-
-    // Island blob
     ctx.beginPath(); ctx.ellipse(px,py,46,34,0,0,Math.PI*2);
     ctx.fillStyle = restored ? new THREE.Color(island.groundColor).getStyle() : '#9B9AE2';
     ctx.fill();
     ctx.strokeStyle = restored ? PALETTE.goldenYellow : PALETTE.softLavender; ctx.lineWidth = 2; ctx.stroke();
-
-    // Glow if restored
     if (restored) {
       ctx.shadowColor = PALETTE.goldenYellow; ctx.shadowBlur = 14;
       ctx.beginPath(); ctx.ellipse(px,py,46,34,0,0,Math.PI*2);
       ctx.strokeStyle = PALETTE.goldenYellow; ctx.lineWidth=2; ctx.stroke();
       ctx.shadowBlur = 0;
     }
-
-    // Lock icon if locked
     if (!unlocked) {
       ctx.font='18px sans-serif'; ctx.fillStyle=PALETTE.deepPlum; ctx.textAlign='center';
       ctx.fillText('🔒',px,py+6);
     }
     ctx.restore();
-
-    // Island name
     ctx.font = 'bold 11px Nunito,sans-serif'; ctx.fillStyle = PALETTE.deepPlum;
     ctx.textAlign='center'; ctx.globalAlpha = unlocked?1:0.4;
     ctx.fillText(island.name, px, py+50);
     ctx.globalAlpha=1;
   });
 
-  // Compass rose (bottom-right)
   const crx = W-52, cry = H-52;
   ctx.font='bold 13px sans-serif'; ctx.fillStyle=PALETTE.goldenYellow;
   ctx.textAlign='center';
@@ -437,28 +638,27 @@ function handleInteract() {
   const island = getIsland(currentIslandId);
   const pp = player.pos;
 
-  // Check shrine
   const sd = Math.sqrt((pp.x-island.shrinePos.x)**2+(pp.z-island.shrinePos.z)**2);
   if (sd < 1.2) { activateShrine(); return; }
 
-  // Check NPCs
   for (let ni = 0; ni < npcMeshes.length; ni++) {
     const nm = npcMeshes[ni];
     const d = pp.distanceTo(nm.position);
     if (d < 1.4) {
+      // NPC faces player
+      const lookTarget = new THREE.Vector3(pp.x, nm.position.y, pp.z);
+      nm.lookAt(lookTarget);
       const npc = island.npcs[ni];
       handleNPCInteract(npc, ni); return;
     }
   }
 
-  // Check crystals
   for (let i = crystalMeshes.length-1; i >= 0; i--) {
     const cm = crystalMeshes[i];
     const d = pp.distanceTo(cm.position);
     if (d < 1.0) { collectCrystal(cm); return; }
   }
 
-  // Lantern pulse
   if (player.abilities.pulse) {
     if (player.activatePulse()) {
       sfxLanternPulse();
@@ -524,7 +724,10 @@ function closeMap() {
 function selectIslandFromMap(islandId) {
   if (!ISLANDS[islandId].unlocked) return;
   closeMap();
-  loadIsland(islandId);
+  fadeOut(() => {
+    loadIsland(islandId);
+    fadeIn();
+  });
 }
 
 // ── Island Navigation ─────────────────────────────────────────
@@ -559,7 +762,6 @@ function setupMobile() {
     const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
     const angle = Math.atan2(dy, dx);
     knob.style.transform = `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px))`;
-    // Isometric input mapping
     joystickDir.x = (dx/40);
     joystickDir.z = (dy/40);
   }, {passive:false});
@@ -603,13 +805,20 @@ document.getElementById('restart-btn').addEventListener('click', ()=>{
 document.getElementById('start-btn').addEventListener('click', () => {
   initAudio(); audioReady = true;
   startExploreMusic();
+  setIslandAudio(0);
   document.getElementById('title-screen').style.display = 'none';
   showHUD(true);
+  // Try loading save
+  const savedIsland = loadGame();
   state = 'playing';
-  buildIsland(0);
-  setTimeout(()=>showDialogue('✨ Lantern Bearer', [
-    'Find 5 crystal shards, bring them to the shrine! Tap anywhere to dismiss.'
-  ], null), 800);
+  buildIsland(savedIsland || 0);
+  if (savedIsland !== false && savedIsland > 0) {
+    setTimeout(()=>showDialogue('✨ Welcome Back', ['Your journey continues… find the remaining crystal shards!'], null), 800);
+  } else {
+    setTimeout(()=>showDialogue('✨ Lantern Bearer', [
+      'Find 5 crystal shards, bring them to the shrine! Tap anywhere to dismiss.'
+    ], null), 800);
+  }
 });
 
 // ── Resize ────────────────────────────────────────────────────
@@ -626,7 +835,6 @@ let last = 0;
 let time = 0;
 particles = new ParticleSystem(scene);
 scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-// Player created after first island build
 const tempScene = new THREE.Scene();
 player = new Player(scene);
 
@@ -638,20 +846,33 @@ function loop(ts) {
 
   // Player movement
   if (state === 'playing') {
-    player.update(dt, keys, (joystickDir.x||joystickDir.z) ? joystickDir : null);
-    // Bounds: keep player on island — clamp pos AND group after update
+    const footstepDust = player.update(dt, keys, (joystickDir.x||joystickDir.z) ? joystickDir : null);
+    if (footstepDust) {
+      particles.addFootstepDust(player.pos.x, player.pos.z);
+    }
+    // Bounds: keep player on island
     const BOUND = 6.5;
     player.pos.x = Math.max(-BOUND, Math.min(BOUND, player.pos.x));
     player.pos.z = Math.max(-BOUND, Math.min(BOUND, player.pos.z));
     player.group.position.x = player.pos.x;
     player.group.position.z = player.pos.z;
-    // Camera follow
-    // Fixed isometric offset — smooth follow on X/Z only, Y is always 12
+
+    // Camera follow — fixed isometric, locked Y=12
     const tx = player.pos.x+12, tz = player.pos.z+12;
     camera.position.x += (tx - camera.position.x) * 5 * dt;
     camera.position.z += (tz - camera.position.z) * 5 * dt;
     camera.position.y = 12;
     camera.lookAt(player.pos.x, 0, player.pos.z);
+
+    // Screen shake
+    if (shakeTimer > 0) {
+      shakeTimer -= dt;
+      const decay = shakeTimer / 0.35;
+      const sx = (Math.random()-0.5)*2 * shakeIntensity * decay;
+      const sz = (Math.random()-0.5)*2 * shakeIntensity * decay;
+      camera.position.x += sx;
+      camera.position.z += sz;
+    }
 
     // Foliage + objects bob
     islandMeshes.forEach(m=>{
@@ -674,11 +895,31 @@ function loop(ts) {
       shrineMesh.rotation.y += dt * 0.4;
       shrineMesh.position.y = 0.3 + Math.sin(time*1.4)*0.03;
     }
+    // Shrine beam pulse
+    if (shrinBeamMesh) {
+      shrinBeamMesh.material.opacity = 0.18 + Math.sin(time*2.2)*0.08;
+      shrinBeamMesh.rotation.y += dt * 0.3;
+    }
+    // Guardian Star orbit + pulse
+    if (guardianStarMesh) {
+      guardianStarAngle += dt * 0.12;
+      guardianStarMesh.position.x = Math.sin(guardianStarAngle) * 4;
+      guardianStarMesh.position.z = Math.cos(guardianStarAngle) * 4;
+      guardianStarMesh.rotation.y += dt * 0.4;
+      guardianStarMesh.rotation.x += dt * 0.2;
+      const pulse = 0.5 + Math.sin(time*1.8)*0.3;
+      guardianStarMesh.material.emissiveIntensity = guardianStarMesh.material.emissiveIntensity * 0.9 + pulse * 0.1;
+      if (guardianStarGlowMesh) {
+        guardianStarGlowMesh.position.copy(guardianStarMesh.position);
+        guardianStarGlowMesh.rotation.copy(guardianStarMesh.rotation);
+        guardianStarGlowMesh.material.opacity = 0.12 + Math.sin(time*1.4)*0.06;
+      }
+      if (guardianStarLight) guardianStarLight.position.copy(guardianStarMesh.position);
+    }
     // Shadow creep — grows and slows player when inside
     if (shadowCreepMesh && shadowCreepMesh.userData.growing) {
       shadowCreepMesh.userData.radius = Math.min(shadowCreepMesh.userData.radius + dt*0.04, 4);
       shadowCreepMesh.scale.setScalar(shadowCreepMesh.userData.radius / 1.5);
-      // Check if player is inside creep radius — slow them and flash vignette
       const scPos = shadowCreepMesh.position;
       const distToCreep = Math.sqrt(Math.pow(player.pos.x-scPos.x,2)+Math.pow(player.pos.z-scPos.z,2));
       const inCreep = distToCreep < shadowCreepMesh.userData.radius * 1.0;
@@ -693,6 +934,17 @@ function loop(ts) {
     if (abSprint && player.abilities.sprint) {
       const cd = document.querySelector('#ab-sprint .ability-cooldown');
       if (cd) cd.style.transform = `scaleY(${Math.max(0, player.sprintCooldown/4)})`;
+    }
+    // Mobile proximity rings pulse
+    if (isMobile) {
+      const pp = player.pos;
+      proximityRingMeshes.forEach(r => {
+        const dist = pp.distanceTo(r.target);
+        const scale = 1 + Math.sin(time*3 + r.phase)*0.12;
+        r.mesh.scale.setScalar(scale);
+        const nearness = Math.max(0, 1 - dist/3);
+        r.mesh.material.opacity = 0.2 + nearness*0.5;
+      });
     }
   }
 
@@ -714,17 +966,8 @@ function loop(ts) {
     }
   }
 
-  // Proximity prompt (crystals / NPCs / shrine)
-  if (state === 'playing' && player) {
-    const pp = player.pos;
-    let nearSomething = false;
-    crystalMeshes.forEach(cm=>{ if(pp.distanceTo(cm.position)<1.0) nearSomething=true; });
-    npcMeshes.forEach(nm=>{ if(pp.distanceTo(nm.position)<1.4) nearSomething=true; });
-    const island=getIsland(currentIslandId);
-    const sd=Math.sqrt((pp.x-island.shrinePos.x)**2+(pp.z-island.shrinePos.z)**2);
-    if(sd<1.2) nearSomething=true;
-    // Subtle: could add a floating E prompt here
-  }
+  // Floating [E] prompt
+  updateEPrompt();
 
   particles.update(dt);
   renderer.render(scene, camera);

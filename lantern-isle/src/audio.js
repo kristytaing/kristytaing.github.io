@@ -3,14 +3,41 @@
 // ============================================================
 let ctx = null, muted = false, masterGain = null;
 let layers = {}, activeLayers = new Set();
+let islandFilter = null; // BiquadFilter for per-island modulation
 
 export function initAudio() {
   if (ctx) return;
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   masterGain = ctx.createGain(); masterGain.gain.value = 0.5;
-  masterGain.connect(ctx.destination);
+  // Island filter sits between drone and masterGain
+  islandFilter = ctx.createBiquadFilter();
+  islandFilter.type = 'lowpass';
+  islandFilter.frequency.value = 1800;
+  islandFilter.Q.value = 0.8;
+  islandFilter.connect(masterGain);
   buildMusicLayers();
   startAmbientLayer('base');
+}
+
+// Per-island audio character
+// Each island gets a different filter cutoff + melody tempo feel
+const ISLAND_AUDIO = [
+  { cutoff: 1800, q: 0.8 },   // 0: Meadow — bright, open
+  { cutoff: 2400, q: 0.5 },   // 1: Tidepools — airy, watery
+  { cutoff: 900,  q: 1.4 },   // 2: Blossom — warm, muffled bloom
+  { cutoff: 3200, q: 0.3 },   // 3: Village — clear, village bells
+  { cutoff: 400,  q: 2.0 },   // 4: Cavern — dark, resonant cave
+  { cutoff: 5000, q: 0.2 },   // 5: Starfall — ethereal, wide open
+];
+
+export function setIslandAudio(islandId) {
+  if (!ctx || !islandFilter) return;
+  const cfg = ISLAND_AUDIO[islandId] || ISLAND_AUDIO[0];
+  const t = ctx.currentTime;
+  islandFilter.frequency.cancelScheduledValues(t);
+  islandFilter.Q.cancelScheduledValues(t);
+  islandFilter.frequency.linearRampToValueAtTime(cfg.cutoff, t + 2.5);
+  islandFilter.Q.linearRampToValueAtTime(cfg.q, t + 2.5);
 }
 
 function note(freq, type='sine') {
@@ -22,21 +49,18 @@ function filterNode(freq=800, type='lowpass') {
 }
 
 function buildMusicLayers() {
-  // Base drone
   layers.base = buildDrone();
-  // Exploration melody
   layers.explore = buildPentatonicMelody();
 }
 
 function buildDrone() {
-  const g = gainNode(0); g.connect(masterGain);
+  const g = gainNode(0); g.connect(islandFilter);
   const freqs = [130.81, 164.81, 196];
   const oscs = freqs.map(f => {
     const o = note(f + Math.random()*0.5, 'sine');
     const og = gainNode(0.06); o.connect(og); og.connect(g);
     o.start(); return o;
   });
-  // LFO vibrato
   const lfo = ctx.createOscillator(); lfo.frequency.value = 0.15;
   const lfoG = gainNode(2); lfo.connect(lfoG);
   freqs.forEach((f,i) => lfoG.connect(oscs[i].frequency));
@@ -46,9 +70,9 @@ function buildDrone() {
 }
 
 function buildPentatonicMelody() {
-  const g = gainNode(0); g.connect(masterGain);
+  const g = gainNode(0); g.connect(islandFilter);
   const pentatonic = [261.63, 293.66, 329.63, 392, 440, 523.25];
-  let step = 0, playing = false, timeoutId = null;
+  let playing = false, timeoutId = null;
   function playNext() {
     if (!playing || muted) { timeoutId = setTimeout(playNext, 600); return; }
     const freq = pentatonic[Math.floor(Math.random()*pentatonic.length)];
@@ -78,11 +102,11 @@ export function stopAmbientLayer(name) {
 }
 export function startExploreMusic() { if(ctx) { startAmbientLayer('base'); startAmbientLayer('explore'); } }
 
-// SFX
+// SFX — bypass islandFilter so they stay crisp
 export function sfxCrystalCollect() {
   if (!ctx || muted) return;
   const times = [0, 0.1, 0.2];
-  const freqs = [523.25, 659.25, 783.99]; // C E G
+  const freqs = [523.25, 659.25, 783.99];
   times.forEach((t, i) => {
     const o = note(freqs[i], 'triangle');
     const g = gainNode(0); o.connect(g); g.connect(masterGain);
@@ -91,7 +115,6 @@ export function sfxCrystalCollect() {
     g.gain.linearRampToValueAtTime(0.22, ctx.currentTime+t+0.04);
     g.gain.linearRampToValueAtTime(0, ctx.currentTime+t+0.28);
     o.stop(ctx.currentTime+t+0.3);
-    // shimmer overtone
     const o2 = note(freqs[i]*2, 'sine');
     const g2 = gainNode(0); o2.connect(g2); g2.connect(masterGain);
     o2.start(ctx.currentTime+t);
