@@ -947,97 +947,130 @@ function checkWin(){
 
 // ═══════════════ HUD ═══════════════
 function drawHUD(){
-  ctx.save();ctx.globalAlpha=0.93;
+  ctx.save();
+  const t=G.t;
 
-  // Portrait removed
+  // soft floating pill helper
+  function softPill(x,y,w,h,r,fillCol,glowCol){
+    ctx.shadowColor=glowCol||'rgba(0,0,0,0)';
+    ctx.shadowBlur=glowCol?12:0;
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+    ctx.fillStyle=fillCol;ctx.fill();
+    ctx.shadowBlur=0;
+  }
 
-  // ── Inventory bar with capacity ──
+  // ── INVENTORY tray (bottom-left, warm cream floating pill) ──
   const maxSlots=PL.maxInv||8;
   const filled=PL.inv.length;
   const isFull=filled>=maxSlots;
-  const iw=14+maxSlots*22+10,ih=44,ix=14,iy=H-14;
-  // Full-basket glow when at capacity
-  if(isFull){ctx.shadowColor='rgba(255,140,180,0.7)';ctx.shadowBlur=18;}
-  else{ctx.shadowColor='rgba(180,120,140,0.15)';ctx.shadowBlur=6;}
-  Theme.roundRect(ix,iy-ih,iw,ih,14);
-  // Fill bar tint behind slots
-  if(filled>0){
-    const fillW=(filled/maxSlots)*(iw-4);
-    const fillG=ctx.createLinearGradient(ix+2,0,ix+2+fillW,0);
-    fillG.addColorStop(0,isFull?'rgba(255,160,190,0.35)':'rgba(220,190,210,0.18)');
-    fillG.addColorStop(1,isFull?'rgba(255,200,220,0.22)':'rgba(220,190,210,0.08)');
-    ctx.fillStyle=fillG;Theme.roundRect(ix+2,iy-ih+2,fillW,ih-4,12);ctx.fill();
-  }
-  ctx.fillStyle='rgba(255,240,248,0.93)';Theme.roundRect(ix,iy-ih,iw,ih,14);ctx.fill();
-  ctx.strokeStyle=isFull?'rgba(255,120,160,0.7)':'rgba(212,160,175,0.5)';ctx.lineWidth=1.5;ctx.stroke();
-  ctx.shadowBlur=0;
-  // Label
-  ctx.fillStyle=isFull?'#d04070':'#c4a0b0';ctx.font='bold 8px Georgia';ctx.textAlign='left';
-  ctx.fillText(isFull?'🧺 FULL':'🧺 petals',ix+8,iy-ih+12);
-  ctx.fillStyle='#b090a0';ctx.font='8px Georgia';ctx.textAlign='right';
-  ctx.fillText(filled+'/'+maxSlots,ix+iw-8,iy-ih+12);
-  // Slots
+  const slotR=11,gap=4,trayPad=8;
+  const trayW=trayPad*2+maxSlots*(slotR*2+gap)-gap;
+  const trayH=slotR*2+trayPad*2+14;
+  const trayX=16,trayY=H-trayH-14;
+  const pulse=0.5+0.5*Math.sin(t*3);
+
+  ctx.globalAlpha=0.88;
+  softPill(trayX,trayY,trayW,trayH,18,
+    isFull?'rgba(255,220,230,0.95)':'rgba(245,238,228,0.92)',
+    isFull?'rgba(255,140,180,'+(0.4+0.3*pulse)+')':'rgba(210,190,170,0.2)');
+  ctx.globalAlpha=0.7;
+  ctx.strokeStyle=isFull?'rgba(240,120,160,0.5)':'rgba(200,175,150,0.35)';
+  ctx.lineWidth=1.2;ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // label
+  ctx.font='bold 8px Georgia';ctx.textAlign='left';
+  ctx.fillStyle=isFull?'#c04868':'#9a8070';
+  ctx.fillText(isFull?'🧺 FULL':'🧺 petals',trayX+trayPad,trayY+12);
+  ctx.font='8px Georgia';ctx.textAlign='right';ctx.fillStyle='#b09080';
+  ctx.fillText(filled+'/'+maxSlots,trayX+trayW-trayPad,trayY+12);
+
+  // slot circles
   for(let i=0;i<maxSlots;i++){
-    const sx=ix+8+i*22+11,sy=iy-ih/2+4;
-    const t=PL.inv[i];
-    // Empty slot
-    ctx.fillStyle=t?PT[t].col:'rgba(200,180,190,0.2)';
-    ctx.strokeStyle=t?PT[t].dark:'rgba(200,160,175,0.25)';ctx.lineWidth=t?1.2:0.8;
-    ctx.beginPath();ctx.ellipse(sx,sy,9,6,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    if(t){ctx.fillStyle='#fff';ctx.font='8px serif';ctx.textAlign='center';ctx.fillText(PT[t].label,sx,sy+3);}
+    const sx=trayX+trayPad+i*(slotR*2+gap)+slotR;
+    const sy=trayY+trayPad+14+slotR;
+    const tp=PL.inv[i];
+    if(tp){
+      const sg=ctx.createRadialGradient(sx-2,sy-2,1,sx,sy,slotR);
+      sg.addColorStop(0,'#fff');sg.addColorStop(0.3,PT[tp].col);sg.addColorStop(1,PT[tp].dark);
+      ctx.beginPath();ctx.arc(sx,sy,slotR,0,Math.PI*2);
+      ctx.fillStyle=sg;ctx.fill();
+      ctx.strokeStyle=PT[tp].dark;ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='9px serif';ctx.textAlign='center';
+      ctx.fillText(PT[tp].label,sx,sy+3);
+    } else {
+      ctx.beginPath();ctx.arc(sx,sy,slotR,0,Math.PI*2);
+      ctx.fillStyle='rgba(200,185,170,0.18)';ctx.fill();
+      ctx.strokeStyle='rgba(190,165,145,0.35)';ctx.lineWidth=0.8;
+      ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+    }
   }
-  // Combinations
+
+  // discovered combination orbs right of tray
   PL.combinations.slice(0,3).forEach((r,i)=>{
     const rec=RECIPES.find(rc=>rc.r===r);if(!rec)return;
-    const sx=ix+iw+14+i*24,sy=iy-ih/2+4;
-    ctx.fillStyle=rec.col;ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.arc(sx,sy,10,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.font='10px serif';ctx.textAlign='center';ctx.fillText(rec.icon,sx,sy+3.5);
+    const ox=trayX+trayW+12+i*26,oy=trayY+trayH/2;
+    ctx.shadowColor=rec.col;ctx.shadowBlur=10;
+    ctx.beginPath();ctx.arc(ox,oy,11,0,Math.PI*2);
+    ctx.fillStyle=rec.col;ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.font='11px serif';ctx.textAlign='center';ctx.fillText(rec.icon,ox,oy+4);
   });
 
-  // ── Silence meter (top-left) ──
-  const smx=14,smy=14,smw=160,smh=14;
-  Theme.roundRect(smx,smy,smw,smh,7);ctx.fillStyle='rgba(240,230,235,0.85)';ctx.fill();
-  ctx.strokeStyle='rgba(200,160,175,0.5)';ctx.lineWidth=1;ctx.stroke();
-  const silW=smw*Math.max(0,1-G.silenceMeter);
-  if(silW>0){
-    const sg=ctx.createLinearGradient(smx,0,smx+silW,0);
-    sg.addColorStop(0,'#e0b8c8');sg.addColorStop(1,'#a0d8a8');
-    ctx.fillStyle=sg;Theme.roundRect(smx,smy,silW,smh,7);ctx.fill();
+  // ── WORLD MEMORY badge (top-left, small pill with progress fill) ──
+  const silPct=Math.round((1-G.silenceMeter)*100);
+  const smW=128,smH=20,smX=14,smY=14;
+  ctx.globalAlpha=0.82;
+  softPill(smX,smY,smW,smH,10,'rgba(240,232,220,0.9)',null);
+  ctx.globalAlpha=1;
+  const fW=Math.max(0,(1-G.silenceMeter))*(smW-4);
+  if(fW>0){
+    const fg=ctx.createLinearGradient(smX+2,0,smX+2+fW,0);
+    fg.addColorStop(0,'#d4a8b8');fg.addColorStop(1,'#98d4a0');
+    ctx.fillStyle=fg;
+    ctx.beginPath();ctx.roundRect(smX+2,smY+2,fW,smH-4,8);ctx.fill();
   }
-  ctx.fillStyle='#9a7888';ctx.font='8px Georgia';ctx.textAlign='left';ctx.fillText(`World Memory: ${Math.round((1-G.silenceMeter)*100)}%`,smx+6,smy+10);
+  ctx.fillStyle='#8a7060';ctx.font='8px Georgia';ctx.textAlign='left';
+  ctx.fillText('✦ Memory '+silPct+'%',smX+7,smY+13);
 
-  // ── Puzzle counter ──
-  const pcx=W-80,pcy=H-52;
-  ctx.shadowColor='rgba(180,160,255,0.4)';ctx.shadowBlur=10;
-  Theme.roundRect(pcx,pcy,70,32,16);ctx.fillStyle='rgba(200,184,255,0.9)';ctx.fill();
-  ctx.shadowBlur=0;ctx.strokeStyle='rgba(180,150,255,0.6)';ctx.lineWidth=1.3;ctx.stroke();
-  ctx.fillStyle='#6a50c0';ctx.font='bold 11px Georgia';ctx.textAlign='center';
-  ctx.fillText(`◈ ${G.puzzlesSolved}/${markers.length}`,pcx+35,pcy+14);
-  ctx.fillStyle='#9a80e0';ctx.font='9px Georgia';
-  ctx.fillText(`mem ${G.memoriesFound}/${G.memoriesTotal}`,pcx+35,pcy+26);
-
-  // ── Wind mood indicator (top-right) ──
-  const wmx=W-90,wmy=8;
+  // ── WIND badge (top-right, orb + label pill) ──
   const wm=WIND_MOODS[G.windMood];
-  Theme.roundRect(wmx,wmy,88,30,10);ctx.fillStyle='rgba(245,240,235,0.88)';ctx.fill();
-  ctx.strokeStyle='rgba(180,160,130,0.5)';ctx.lineWidth=1;ctx.stroke();
-  ctx.fillStyle='#8a7060';ctx.font='9px Georgia';ctx.textAlign='left';
-  ctx.fillText(`Wind: ${G.windMood}`,wmx+7,wmy+12);
-  ctx.fillStyle=wm.col;ctx.beginPath();ctx.arc(wmx+72,wmy+15,7,0,Math.PI*2);ctx.fill();
-  // Needle
-  const na=G.windAngle;
-  ctx.strokeStyle='#c04040';ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(wmx+72,wmy+15);ctx.lineTo(wmx+72+Math.cos(na)*6,wmy+15+Math.sin(na)*6);ctx.stroke();
-
-  // ── Day phase ──
+  const wbX=W-110,wbY=10;
+  ctx.globalAlpha=0.82;
+  softPill(wbX,wbY,100,22,11,'rgba(240,236,226,0.9)',null);
+  ctx.globalAlpha=1;
+  const orbX=wbX+14,orbY=wbY+11;
+  const wog=ctx.createRadialGradient(orbX-2,orbY-2,1,orbX,orbY,8);
+  wog.addColorStop(0,'#fff');wog.addColorStop(1,wm.col);
+  ctx.beginPath();ctx.arc(orbX,orbY,7,0,Math.PI*2);ctx.fillStyle=wog;ctx.fill();
+  ctx.strokeStyle='rgba(80,40,30,0.7)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(orbX,orbY);
+  ctx.lineTo(orbX+Math.cos(G.windAngle)*5,orbY+Math.sin(G.windAngle)*5);ctx.stroke();
+  ctx.fillStyle='#7a6a58';ctx.font='8px Georgia';ctx.textAlign='left';
+  ctx.fillText(G.windMood,wbX+25,wbY+14);
   const{p:dp}=dayPhase();
-  ctx.fillStyle='rgba(150,120,100,0.8)';ctx.font='9px Georgia';ctx.textAlign='right';
-  ctx.fillText(dp,W-8,22);
+  ctx.fillStyle='rgba(140,110,80,0.8)';ctx.font='italic 8px Georgia';ctx.textAlign='right';
+  ctx.fillText(dp,W-8,wbY+14);
+
+  // ── PUZZLE COUNTER badge (bottom-right, lavender gem pill) ──
+  const pcX=W-78,pcY=H-46;
+  const gemPulse=0.5+0.5*Math.sin(t*2.5);
+  ctx.globalAlpha=0.88;
+  softPill(pcX,pcY,68,34,17,'rgba(220,210,248,0.92)','rgba(180,155,255,'+(0.3+0.2*gemPulse)+')');
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#5a40b0';ctx.font='bold 11px Georgia';ctx.textAlign='center';
+  ctx.fillText('◈ '+G.puzzlesSolved+'/'+markers.length,pcX+34,pcY+14);
+  ctx.fillStyle='#8a72cc';ctx.font='8px Georgia';
+  ctx.fillText('mem '+G.memoriesFound+'/'+G.memoriesTotal,pcX+34,pcY+27);
 
   ctx.restore();
 }
-
 // ═══════════════ COMBINE UI ═══════════════
 function drawCombineUI(){
   if(!G.showCombineUI)return;
@@ -1117,39 +1150,53 @@ function drawMemoryScene(){
 
 // ═══════════════ CONTEXT TOAST ═══════════════
 function drawToast(){
-  // Build contextual hint string
   let hint='';
-  if(G.nearStone&&!G.nearStone.learned) hint='[E] Learn wind stone · [R] Rest to advance time';
-  else if(G.nearMarker&&!G.nearMarker.solved) hint='[E] Use spell to restore this zone';
-  else if(G.nearFragment&&!G.nearFragment.collected) hint='[E] Collect memory fragment';
-  else if(PL.inv.length>=2) hint='[C] Open cauldron · combine petals into a spell';
-  else if(PL.inv.length>0) hint='Collect more petals · [Tab] enter shadow world';
-  else hint='Walk into glowing petals to collect them';
-  // Draw toast at bottom-center
-  const tw=Math.min(500,hint.length*7+40),th=32;
-  const tx=W/2-tw/2,ty=H-52;
+  if(G.nearStone&&!G.nearStone.learned) hint='[E] attune wind stone  ·  [R] rest to advance time';
+  else if(G.nearMarker&&!G.nearMarker.solved) hint='[E] use spell to restore this zone';
+  else if(G.nearFragment&&!G.nearFragment.collected) hint='[E] collect memory fragment';
+  else if(PL.inv.length>=2) hint='[C] open cauldron  ·  combine petals into a spell';
+  else if(PL.inv.length>0) hint='collect more petals  ·  [Tab] enter shadow world';
+  else hint='walk into glowing petals to collect them';
+  const tw=Math.min(480,hint.length*6.2+44),th=28;
+  const tx=W/2-tw/2,ty=H-50;
   ctx.save();
-  ctx.globalAlpha=0.88;
-  ctx.shadowColor='rgba(80,40,60,0.4)';ctx.shadowBlur=12;
-  Theme.roundRect(tx,ty,tw,th,12);
-  ctx.fillStyle='rgba(30,18,28,0.82)';ctx.fill();
-  ctx.strokeStyle='rgba(200,140,170,0.5)';ctx.lineWidth=1;ctx.stroke();
+  // Soft dark leaf-shaped pill — no hard box
+  ctx.globalAlpha=0.82;
+  ctx.shadowColor='rgba(60,30,50,0.35)';ctx.shadowBlur=14;
+  ctx.beginPath();
+  ctx.moveTo(tx+14,ty);ctx.lineTo(tx+tw-14,ty);
+  ctx.quadraticCurveTo(tx+tw,ty,tx+tw,ty+14);
+  ctx.lineTo(tx+tw,ty+th-14);ctx.quadraticCurveTo(tx+tw,ty+th,tx+tw-14,ty+th);
+  ctx.lineTo(tx+14,ty+th);ctx.quadraticCurveTo(tx,ty+th,tx,ty+th-14);
+  ctx.lineTo(tx,ty+14);ctx.quadraticCurveTo(tx,ty,tx+14,ty);
+  ctx.closePath();
+  ctx.fillStyle='rgba(28,14,24,0.78)';ctx.fill();
   ctx.shadowBlur=0;ctx.globalAlpha=1;
-  ctx.fillStyle='#f5d8e8';ctx.font='11px Georgia';ctx.textAlign='center';
-  ctx.fillText(hint,W/2,ty+20);
+  ctx.fillStyle='rgba(245,215,232,0.92)';ctx.font='10px Georgia';ctx.textAlign='center';
+  ctx.fillText(hint,W/2,ty+18);
   ctx.restore();
 }
-
 // ═══════════════ NOTICE / POPS ═══════════════
 function drawNotice(){
   if(G.noticeTimer<=0)return;
   const a=Math.min(1,G.noticeTimer*2);
-  ctx.globalAlpha=a*0.92;
-  Theme.roundRect(W/2-140,H*0.18,280,30,12);
-  ctx.fillStyle='rgba(255,248,250,0.95)';ctx.fill();
-  ctx.strokeStyle='rgba(210,160,175,0.5)';ctx.lineWidth=1;ctx.stroke();
-  ctx.globalAlpha=a;ctx.fillStyle='#7a5060';ctx.font='11px Georgia';ctx.textAlign='center';
-  ctx.fillText(G.lastNotice,W/2,H*0.18+20);ctx.globalAlpha=1;
+  const tw=300,th=32,tx=W/2-150,ty=H*0.16;
+  ctx.save();ctx.globalAlpha=a*0.9;
+  // Floating warm cream pill with subtle glow
+  ctx.shadowColor='rgba(220,180,140,0.5)';ctx.shadowBlur=16;
+  ctx.beginPath();
+  ctx.moveTo(tx+16,ty);ctx.lineTo(tx+tw-16,ty);
+  ctx.quadraticCurveTo(tx+tw,ty,tx+tw,ty+16);
+  ctx.lineTo(tx+tw,ty+th-16);ctx.quadraticCurveTo(tx+tw,ty+th,tx+tw-16,ty+th);
+  ctx.lineTo(tx+16,ty+th);ctx.quadraticCurveTo(tx,ty+th,tx,ty+th-16);
+  ctx.lineTo(tx,ty+16);ctx.quadraticCurveTo(tx,ty,tx+16,ty);
+  ctx.closePath();
+  ctx.fillStyle='rgba(252,244,234,0.96)';ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(210,170,130,0.4)';ctx.lineWidth=1;ctx.stroke();
+  ctx.globalAlpha=a;ctx.fillStyle='#7a5848';ctx.font='11px Georgia';ctx.textAlign='center';
+  ctx.fillText(G.lastNotice,W/2,ty+21);
+  ctx.restore();
 }
 function drawPops(){
   pops=pops.filter(p=>p.p<1);
