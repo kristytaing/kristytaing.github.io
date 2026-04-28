@@ -29,8 +29,8 @@ export const ISLANDS = [
     // hidden:true crystals only spawn after their gateNpc quest is resolved
     crystalPositions: [
       {x:-2,z:-2}, {x:3,z:1}, {x:-1,z:3},
-      {x:4,z:-3, hidden:true, gateNpc:1},   // unlocked by Fern
-      {x:-4,z:2, hidden:true, gateNpc:2},   // unlocked by Sprite
+      {x:3,z:-4, hidden:true, gateNpc:1},   // unlocked by Fern
+      {x:-3,z:3, hidden:true, gateNpc:2},   // unlocked by Sprite
     ],
     shrinePos: {x:0,z:0},
     npcs: [

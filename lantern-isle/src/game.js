@@ -1188,6 +1188,23 @@ document.getElementById('restart-btn').addEventListener('click', ()=>{
   loadIsland(0); showHUD(true); state='playing';
 });
 
+// ── Title screen reset ────────────────────────────────────────
+document.getElementById('reset-btn').addEventListener('click', ()=>{
+  localStorage.removeItem('lanternIsle_save');
+  ISLANDS.forEach(i=>{ i.unlocked=false; i.restored=false; i.crystalCount=0;
+    if(i.crystalPositions) i.crystalPositions.forEach(cp=>{ cp.collected=false; delete cp._spawned; }); });
+  ISLANDS[0].unlocked=true;
+  document.getElementById('title-screen').style.display='none';
+  initAudio(); audioReady=true;
+  startExploreMusic(); setIslandAudio(0);
+  showHUD(true); state='playing';
+  buildIsland(0);
+  setTimeout(()=>showDialogue('✨ Lantern Bearer',[
+    'Find 5 crystal shards, bring them to the shrine!',
+    'Press Space or tap NPCs to talk — some know where hidden shards are!'
+  ],null),800);
+});
+
 // ── Start ─────────────────────────────────────────────────────
 document.getElementById('start-btn').addEventListener('click', ()=>{
   initAudio(); audioReady=true;
