@@ -38,8 +38,10 @@ let shakeTimer = 0, shakeIntensity = 0;
 // ── Scene objects ─────────────────────────────────────────────
 let player, particles, islandMeshes = [], crystalMeshes = [], npcMeshes = [], shrineMesh;
 let crystalLights = []; // track glow lights per crystal for removal
+let questItemMeshes = []; // Mochi cat + water jar on island 3
+let questIndicators = []; // floating ?/✓ above NPCs
 let crystalOrbits = [], shadowCreep, shadowCreepMesh;
-let questState = { find_cat: false, fetch_water: false };
+let questState = { find_cat: false, fetch_water: false, mochi_found: false, jar_held: false };
 let inventoryItems = [];
 let pulseRevealTimer = 0;
 
@@ -68,7 +70,7 @@ const dialogueContinue = document.getElementById('dialogue-continue');
 let dialogueQueue = [], dialogueCallback = null, typewriterTimer = null, currentLine = '', fullLine = '';
 
 // ── HUD ───────────────────────────────────────────────────────
-function updateCrystalHUD() {
+function updateCrystalHUD(pulse) {
   const island = getIsland(currentIslandId);
   const count = island.crystalCount;
   for (let i = 0; i < 5; i++) {
@@ -78,6 +80,12 @@ function updateCrystalHUD() {
       : `<svg viewBox="0 0 22 26"><polygon points="11,1 21,8 21,18 11,25 1,18 1,8" fill="none" stroke="#C6C3DC" stroke-width="1.5"/></svg>`;
   }
   document.getElementById('crystal-label').textContent = `Crystals ${count}/5`;
+  if (pulse) {
+    const hud = document.getElementById('hud-crystals');
+    hud.style.transition = 'transform 0.12s ease';
+    hud.style.transform = 'scale(1.35)';
+    setTimeout(() => { hud.style.transform = 'scale(1.0)'; }, 130);
+  }
 }
 
 function showHUD(show) {
@@ -194,6 +202,120 @@ function buildShrineBeam(island) {
 
 function removeShrineBeam() {
   if (shrinBeamMesh) { scene.remove(shrinBeamMesh); shrinBeamMesh = null; }
+}
+
+// ── Quest Indicator Builder ───────────────────────────────────
+function buildQuestIndicator(npcMesh, npc) {
+  // Floating ? or ✓ sprite above NPC head
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 64, 64);
+  ctx.font = 'bold 42px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const hasDoneQuest = npc.quest && npc.quest.done;
+  ctx.fillStyle = hasDoneQuest ? '#7BDD90' : '#FFD84A';
+  ctx.fillText(hasDoneQuest ? '✓' : '?', 32, 32);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.45, 0.45, 0.45);
+  sprite.position.set(npcMesh.position.x, 1.5, npcMesh.position.z);
+  sprite.userData = { npcRef: npc, bobBase: 1.5 };
+  scene.add(sprite);
+  questIndicators.push({ mesh: sprite, npc });
+}
+
+// ── Quest Item Meshes (Island 3) ─────────────────────────────
+function buildQuestItems(islandId) {
+  if (islandId !== 3) return;
+  // Mochi the cat — orange sphere body, pointy ears, tail
+  const catGroup = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 8, 8),
+    new THREE.MeshLambertMaterial({ color: 0xF4883A })
+  );
+  body.position.y = 0.18;
+  catGroup.add(body);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0xF4883A })
+  );
+  head.position.set(0, 0.38, 0.08);
+  catGroup.add(head);
+  // Ears (two small cones)
+  [-1,1].forEach(side => {
+    const ear = new THREE.Mesh(
+      new THREE.ConeGeometry(0.045, 0.09, 6),
+      new THREE.MeshLambertMaterial({ color: 0xF4883A })
+    );
+    ear.position.set(side * 0.08, 0.51, 0.07);
+    catGroup.add(ear);
+  });
+  // Eyes
+  [-1,1].forEach(side => {
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.025, 6, 6),
+      new THREE.MeshLambertMaterial({ color: 0x222244, emissive: 0x4466AA, emissiveIntensity: 0.5 })
+    );
+    eye.position.set(side * 0.05, 0.41, 0.19);
+    catGroup.add(eye);
+  });
+  // Tail (curved cylinder)
+  const tail = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.025, 0.035, 0.22, 6),
+    new THREE.MeshLambertMaterial({ color: 0xF4883A })
+  );
+  tail.position.set(0.16, 0.22, -0.1);
+  tail.rotation.z = -0.8;
+  catGroup.add(tail);
+  // Glow ring to make it interactable-looking
+  const ringGeo = new THREE.RingGeometry(0.22, 0.30, 20);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFAA33, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.01;
+  ring.userData.isPulseRing = true;
+  catGroup.add(ring);
+  catGroup.position.set(-2, 0, 2);
+  catGroup.userData = { type: 'mochi_cat', bobBase: 0, bobOffset: Math.random()*Math.PI*2 };
+  scene.add(catGroup);
+  questItemMeshes.push(catGroup);
+
+  // Water jar — cylinder with a handle arc
+  const jarGroup = new THREE.Group();
+  const jar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.13, 0.28, 10),
+    new THREE.MeshLambertMaterial({ color: 0x7EC0D4, emissive: 0x336688, emissiveIntensity: 0.2 })
+  );
+  jar.position.y = 0.14;
+  jarGroup.add(jar);
+  const lid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.1, 0.06, 10),
+    new THREE.MeshLambertMaterial({ color: 0xA8D8EA })
+  );
+  lid.position.y = 0.31;
+  jarGroup.add(lid);
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.08, 0.02, 6, 12, Math.PI),
+    new THREE.MeshLambertMaterial({ color: 0x5A9EB5 })
+  );
+  handle.position.set(0.12, 0.16, 0);
+  handle.rotation.z = Math.PI/2;
+  jarGroup.add(handle);
+  // Glow ring
+  const jRingGeo = new THREE.RingGeometry(0.18, 0.25, 20);
+  const jRingMat = new THREE.MeshBasicMaterial({ color: 0x7EC0D4, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+  const jRing = new THREE.Mesh(jRingGeo, jRingMat);
+  jRing.rotation.x = -Math.PI/2;
+  jRing.position.y = 0.01;
+  jRing.userData.isPulseRing = true;
+  jarGroup.add(jRing);
+  jarGroup.position.set(3, 0, -1);
+  jarGroup.userData = { type: 'water_jar', bobBase: 0, bobOffset: Math.random()*Math.PI*2 };
+  scene.add(jarGroup);
+  questItemMeshes.push(jarGroup);
 }
 
 // ── NPC Mesh Builder (thematic shapes) ───────────────────────
@@ -488,6 +610,8 @@ function buildIsland(islandId) {
   crystalOrbits = [];
   crystalLights = [];
   islandMeshes = []; crystalMeshes = []; npcMeshes = [];
+  questItemMeshes.forEach(m => scene.remove(m)); questItemMeshes = [];
+  questIndicators.forEach(q => scene.remove(q.mesh)); questIndicators = [];
 
   const island = getIsland(islandId);
   scene.background = new THREE.Color(island.skyTop);
@@ -582,6 +706,7 @@ function buildIsland(islandId) {
       scene.add(nRing);
       proximityRingMeshes.push({ mesh: nRing, target: new THREE.Vector3(npc.x, 0, npc.z), phase: Math.random()*Math.PI*2 });
     }
+    if (npc.quest && !island.restored) buildQuestIndicator(nMesh, npc);
   });
 
   // Shadow Creep
@@ -594,6 +719,7 @@ function buildIsland(islandId) {
   scene.add(shadowCreepMesh);
 
   buildGuardianStar();
+  buildQuestItems(islandId);
 
   particles.addAmbientMotes(isMobile ? 60 : 120);
   if (islandId === 2) particles.addPetals(isMobile?20:40, PALETTE.softPinkN);
@@ -723,7 +849,7 @@ function collectCrystal(mesh) {
   particles.addBurst(mesh.position.x, mesh.position.y, mesh.position.z, PALETTE.softPinkN, 25);
   particles.addPulseRing(mesh.position.x, 0.1, mesh.position.z);
   sfxCrystalCollect();
-  updateCrystalHUD();
+  updateCrystalHUD(true);
   if (island.crystalCount >= island.totalCrystals) {
     buildShrineBeam(island);
     setTimeout(()=>showDialogue('✨ Shrine', ['All crystal shards gathered! Bring them to the shrine at the center of the island!'], null), 600);
@@ -959,20 +1085,29 @@ function handleNPCInteract(npc, ni) {
     }
 
     if (qt === 'find_cat' && !questState.find_cat) {
-      showDialogue(npc.name, npc.lines, ()=>{
-        showDialogue(npc.name, ["*gasp* There's Mochi! Thank you! Here, take this crystal shard!"], ()=>{
-          questState.find_cat = true;
-          island.crystalCount++; updateCrystalHUD(); sfxCrystalCollect();
-        });
+      // Must find Mochi first (walk near the cat mesh)
+      const mochiMesh = questItemMeshes.find(m => m.userData.type === 'mochi_cat');
+      const mochiFound = !mochiMesh || questState.mochi_found;
+      if (!mochiFound) {
+        showDialogue(npc.name, ["Oh! Mochi ran off again! She has orange fur and loves sparkly things.", "I think she went toward the mossy corner… could you find her?"], null);
+        return;
+      }
+      showDialogue(npc.name, ["*gasp* There's Mochi! Thank you! Here, take this crystal shard!"], ()=>{
+        questState.find_cat = true;
+        island.crystalCount++; updateCrystalHUD(); sfxCrystalCollect();
       });
       return;
     }
     if (qt === 'fetch_water' && !questState.fetch_water) {
-      showDialogue(npc.name, npc.lines, ()=>{
-        showDialogue(npc.name, ["Oh, you brought me water! You're too kind! Take this shard I found!"], ()=>{
-          questState.fetch_water = true;
-          island.crystalCount++; updateCrystalHUD(); sfxCrystalCollect();
-        });
+      const jarMesh = questItemMeshes.find(m => m.userData.type === 'water_jar');
+      const jarHeld = !jarMesh || questState.jar_held;
+      if (!jarHeld) {
+        showDialogue(npc.name, ["My garden is wilting… could you bring water from the well?", "The water jar should be just to the east — bring it to me!"], null);
+        return;
+      }
+      showDialogue(npc.name, ["Oh, you brought me water! You're too kind! Take this shard I found!"], ()=>{
+        questState.fetch_water = true;
+        island.crystalCount++; updateCrystalHUD(); sfxCrystalCollect();
       });
       return;
     }
@@ -1000,7 +1135,7 @@ function selectIslandFromMap(islandId) {
 
 function loadIsland(id) {
   currentIslandId = id;
-  questState = { find_cat: false, fetch_water: false };
+  questState = { find_cat: false, fetch_water: false, mochi_found: false, jar_held: false };
   player.pos.set(0, 0, 2);
   buildIsland(id);
   updateAbilityBar();
@@ -1139,6 +1274,35 @@ function loop(ts) {
         }
       });
     });
+    // Quest indicators bob + refresh symbol
+    questIndicators.forEach(q => {
+      const hasDone = q.npc.quest && q.npc.quest.done;
+      q.mesh.position.y = q.mesh.userData.bobBase + Math.sin(time*2.0)*0.06;
+      // Rebuild texture if quest state changed
+      if (q.mesh.userData.wasQuested !== hasDone) {
+        q.mesh.userData.wasQuested = hasDone;
+        const c2 = document.createElement('canvas'); c2.width=64; c2.height=64;
+        const cx = c2.getContext('2d');
+        cx.clearRect(0,0,64,64);
+        cx.font='bold 42px sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+        cx.fillStyle = hasDone ? '#7BDD90' : '#FFD84A';
+        cx.fillText(hasDone ? '✓' : '?', 32, 32);
+        q.mesh.material.map = new THREE.CanvasTexture(c2);
+        q.mesh.material.needsUpdate = true;
+      }
+      // Hide when island restored
+      const isl = getIsland(currentIslandId);
+      q.mesh.visible = !isl.restored;
+    });
+    // Quest items bob + ring pulse
+    questItemMeshes.forEach(m => {
+      m.position.y = m.userData.bobBase + Math.sin(time*1.6 + m.userData.bobOffset)*0.05;
+      m.children.forEach(c => {
+        if (c.userData.isPulseRing) {
+          c.material.opacity = 0.4 + Math.sin(time*3)*0.25;
+        }
+      });
+    });
     // Crystal bob
     crystalMeshes.forEach(m=>{
       m.position.y=m.userData.bobBase+Math.sin(time*2.2)*0.06;
@@ -1187,6 +1351,26 @@ function loop(ts) {
   if (state === 'playing' && player) {
     for(let i=crystalMeshes.length-1;i>=0;i--){
       if(player.pos.distanceTo(crystalMeshes[i].position)<1.1){ collectCrystal(crystalMeshes[i]); break; }
+    }
+    // Quest item proximity: Mochi cat + water jar
+    for(let qi=questItemMeshes.length-1;qi>=0;qi--){
+      const qm = questItemMeshes[qi];
+      if(player.pos.distanceTo(qm.position)<1.0){
+        if(qm.userData.type==='mochi_cat' && !questState.mochi_found){
+          questState.mochi_found=true;
+          particles.addBurst(qm.position.x,0.3,qm.position.z,0xF4883A,16);
+          showFloatingText('🐱 Found Mochi!',qm.position.x,qm.position.z,'#F4883A');
+          scene.remove(qm); questItemMeshes.splice(qi,1);
+          sfxCrystalCollect();
+        } else if(qm.userData.type==='water_jar' && !questState.jar_held){
+          questState.jar_held=true;
+          particles.addBurst(qm.position.x,0.3,qm.position.z,0x7EC0D4,14);
+          showFloatingText('💧 Water Jar picked up!',qm.position.x,qm.position.z,'#7EC0D4');
+          scene.remove(qm); questItemMeshes.splice(qi,1);
+          sfxCrystalCollect();
+        }
+        break;
+      }
     }
     // Auto-trigger shrine on proximity (tighter: 0.85) + Space still needed for intentional confirm
     if(shrineMesh){
