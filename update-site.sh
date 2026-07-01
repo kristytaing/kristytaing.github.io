@@ -13,6 +13,13 @@ if [ ! -d "$REPO_DIR/.git" ]; then
   exit 1
 fi
 
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$CURRENT_BRANCH" != "master" ]; then
+  echo "Error: you're on branch '$CURRENT_BRANCH', not 'master'."
+  echo "GitHub Pages only deploys from pushes to 'master'. Run: git checkout master"
+  exit 1
+fi
+
 echo "Mirroring $SITE_URL into $REPO_DIR ..."
 
 # -*                          reject everything by default
