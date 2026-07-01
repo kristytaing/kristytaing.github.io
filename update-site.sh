@@ -38,6 +38,13 @@ if [ -f "$REPO_DIR/index-2.html" ]; then
   cp "$REPO_DIR/index-2.html" "$REPO_DIR/index.html"
 fi
 
+# HTTrack stamps a timestamped comment into every HTML file on every run
+# (e.g. "<!-- Mirrored from ktaing.framer.website/ by HTTrack ... Wed, 01 Jul 2026 ... -->").
+# That timestamp changes every run even when the actual page content hasn't,
+# which would otherwise create a noisy commit every time. Strip it out since
+# it's just HTTrack's own bookkeeping and has no effect on the live site.
+find "$REPO_DIR" -name "*.html" -exec sed -i '' '/Mirrored from ktaing.framer.website/d' {} +
+
 echo "Mirror complete. Checking for changes..."
 cd "$REPO_DIR"
 
