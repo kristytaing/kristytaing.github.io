@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e  # exit immediately if any command fails
+
+# --- CONFIG ---
+# Path to your local repo. Assumes you've cd'd into the repo before running.
+REPO_DIR="$(pwd)"
+SITE_URL="https://ktaing.framer.website/"
+
+# --- SANITY CHECK ---
+if [ ! -d "$REPO_DIR/.git" ]; then
+  echo "Error: $REPO_DIR doesn't look like a git repo (no .git folder found)."
+  echo "cd into your repo directory first, then re-run this script."
+  exit 1
+fi
+
+echo "Mirroring $SITE_URL into $REPO_DIR ..."
+
+# -*                          reject everything by default
+# +ktaing.framer.website/*    only mirror your own site (not external linked domains)
+# -N100                       flatten output: no hostname subfolder, files land in repo root
+# -I0                         suppress HTTrack's own "Local index" boilerplate page
+# -update -q                  update existing mirror in place, no interactive prompts
+httrack "$SITE_URL" -O "$REPO_DIR" "-*" "+ktaing.framer.website/*" -N100 -I0 -update -q
+
+# Because -I0 disables HTTrack's auto-redirect stub, the real homepage content
+# lands in index-2.html instead of index.html. Copy it over so index.html
+# (the actual file GitHub Pages serves at your root URL) always has the
+# correct, current content and metadata for browsers, search engines, and
+# social link previews.
+if [ -f "$REPO_DIR/index-2.html" ]; then
+  cp "$REPO_DIR/index-2.html" "$REPO_DIR/index.html"
+fi
+
+echo "Mirror complete. Checking for changes..."
+cd "$REPO_DIR"
+
+if [ -z "$(git status --porcelain)" ]; then
+  echo "No changes detected. Nothing to commit."
+  exit 0
+fi
+
+git add .
+git commit -m "Update site mirror: $(date '+%Y-%m-%d %H:%M:%S')"
+git push
+
+echo "Done! Site updated and pushed to GitHub Pages."
